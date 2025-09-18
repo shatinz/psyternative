@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Search, Menu, LogOut, UserPlus, LogIn } from "lucide-react";
+import { Search, Menu, LogOut, UserPlus, LogIn, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../ui/button";
@@ -24,7 +24,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
-  const { user, loading } = useAuth();
+  const { user, loading, username } = useAuth();
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -47,10 +47,18 @@ export default function Header() {
 
     if (user) {
       return (
-        <Button onClick={handleLogout} variant="ghost" size="sm">
-          <LogOut className="ml-2 h-4 w-4" />
-          خروج
-        </Button>
+        <div className="flex items-center gap-2">
+            {username && <Button asChild variant="ghost" size="sm">
+                <Link href={`/profile/${username}`}>
+                    <UserIcon className="ml-2 h-4 w-4" />
+                    {username}
+                </Link>
+            </Button>}
+          <Button onClick={handleLogout} variant="ghost" size="sm">
+            <LogOut className="ml-2 h-4 w-4" />
+            خروج
+          </Button>
+        </div>
       );
     }
 
@@ -77,10 +85,20 @@ export default function Header() {
 
     if (user) {
       return (
-        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-lg">
-          <LogOut className="ml-2 h-5 w-5" />
-          خروج
-        </Button>
+          <>
+            {username && <Link
+                href={`/profile/${username}`}
+                className="text-lg text-muted-foreground transition-colors hover:text-primary"
+                onClick={() => setIsMenuOpen(false)}
+            >
+                <UserIcon className="ml-2 inline h-5 w-5" />
+                {username}
+            </Link>}
+            <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-lg">
+              <LogOut className="ml-2 h-5 w-5" />
+              خروج
+            </Button>
+          </>
       );
     }
 

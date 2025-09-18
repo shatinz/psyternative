@@ -3,6 +3,7 @@ import CommentsSection from "@/components/experiences/comments-section";
 import { Badge } from "@/components/ui/badge";
 import { getExperienceById } from "@/lib/data";
 import { notFound } from "next/navigation";
+import Link from 'next/link';
 
 export default async function ExperienceDetailPage({
   params,
@@ -37,7 +38,7 @@ export default async function ExperienceDetailPage({
             <Badge variant={variant} className="text-sm">{label}</Badge>
           </div>
           <p className="text-muted-foreground">
-            توسط {experience.author} در {formattedDate}
+            توسط <Link href={`/profile/${experience.author}`} className="hover:underline text-muted-foreground/90">{experience.author}</Link> در {formattedDate}
           </p>
         </header>
         <div className="prose prose-lg dark:prose-invert max-w-none leading-relaxed text-foreground/90 font-body">

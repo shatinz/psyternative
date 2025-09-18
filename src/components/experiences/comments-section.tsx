@@ -109,7 +109,11 @@ export default function CommentsSection({ experienceId, comments }: CommentsSect
                       <AvatarFallback>{comment.author.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-base font-bold">{comment.author}</CardTitle>
+                      <CardTitle className="text-base font-bold">
+                        <Link href={`/profile/${comment.author}`} className="hover:underline">
+                            {comment.author}
+                        </Link>
+                      </CardTitle>
                       <CardDescription>
                         {new Date(comment.createdAt).toLocaleDateString("fa-IR", {
                           year: "numeric",

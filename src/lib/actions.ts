@@ -4,9 +4,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { addComment, createExperience } from "./data";
+import { addComment, createExperience, createUserProfile, getUserByEmail, isUsernameUnique } from "./data";
 import type { ExperienceReport } from "@/types";
-import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "./firebase";
 import { getAuth } from "firebase-admin/auth";
 import { adminApp } from "./firebase-admin";
@@ -48,7 +48,7 @@ export async function createExperienceAction(
     return { errors: { _form: ["Invalid authentication token. Please log in again."] } };
   }
 
-  const authorName = decodedToken.name || decodedToken.email || "Anonymous";
+  const authorId = decodedToken.uid;
 
   if (!validatedFields.success) {
     return {
@@ -64,7 +64,7 @@ export async function createExperienceAction(
     const experienceData = {
       ...validatedFields.data,
       summary: summary,
-      author: authorName
+      authorId: authorId,
     };
 
     newExperience = await createExperience(experienceData);
@@ -90,6 +90,7 @@ export async function createExperienceAction(
   
   revalidatePath("/experiences");
   revalidatePath("/");
+  revalidatePath(`/profile/${decodedToken.username}`);
   redirect(`/experiences/${newExperience.id}`);
 }
 
@@ -122,8 +123,7 @@ export async function addCommentAction(
     } catch (error) {
       return { errors: { _form: ["Invalid authentication token. Please log in again."] } };
     }
-    const authorName = decodedToken.name || decodedToken.email || "Anonymous";
-
+    const authorId = decodedToken.uid;
 
     if(!validatedFields.success) {
         return {
@@ -134,7 +134,7 @@ export async function addCommentAction(
     try {
         await addComment(validatedFields.data.experienceId, {
             text: validatedFields.data.text,
-            author: authorName,
+            authorId: authorId,
         });
         revalidatePath(`/experiences/${validatedFields.data.experienceId}`);
         return {
@@ -159,7 +159,7 @@ const authSchema = z.object({
 async function firebaseAuthAction(
   formData: FormData,
   action: "signUp" | "signIn"
-): Promise<{ errors: any, ran: boolean }> {
+): Promise<{ errors: any, ran: boolean, user?: UserCredential }> {
   const validatedFields = authSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -177,6 +177,22 @@ async function firebaseAuthAction(
         validatedFields.data.email,
         validatedFields.data.password
       );
+      
+      const username = validatedFields.data.email.split('@')[0];
+      const isUnique = await isUsernameUnique(username);
+      const finalUsername = isUnique ? username : `${username}-${Date.now()}`;
+
+      await createUserProfile(userCredential.user.uid, {
+        email: validatedFields.data.email,
+        username: finalUsername,
+        displayName: finalUsername,
+        createdAt: new Date(),
+      });
+
+      await updateProfile(userCredential.user, {
+        displayName: finalUsername,
+      });
+
     } else {
       userCredential = await signInWithEmailAndPassword(
         auth,
@@ -185,7 +201,7 @@ async function firebaseAuthAction(
       );
     }
     
-    return { errors: {}, ran: true };
+    return { errors: {}, ran: true, user: userCredential };
 
   } catch (error: any) {
     console.error(`Firebase ${action} error:`, error);
@@ -233,4 +249,53 @@ export async function signUpAction(prevState: any, formData: FormData) {
 export async function signInAction(prevState: any, formData: FormData) {
   const result = await firebaseAuthAction(formData, "signIn");
   return result;
+}
+
+const profileSchema = z.object({
+  displayName: z.string().min(2, "Display name must be at least 2 characters long."),
+  username: z.string().min(3, "Username must be at least 3 characters long.").regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores."),
+});
+
+export async function updateProfileAction(prevState: any, formData: FormData) {
+  const idToken = formData.get("idToken") as string;
+  if (!idToken) return { errors: { _form: ["Authentication required."] } };
+
+  let decodedToken;
+  try {
+    decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
+  } catch (error) {
+    return { errors: { _form: ["Invalid authentication token."] } };
+  }
+
+  const validatedFields = profileSchema.safeParse({
+    displayName: formData.get("displayName"),
+    username: formData.get("username"),
+  });
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  const { displayName, username } = validatedFields.data;
+  const uid = decodedToken.uid;
+
+  if (username !== decodedToken.username) {
+    const isUnique = await isUsernameUnique(username);
+    if (!isUnique) {
+      return { errors: { username: ["This username is already taken."] } };
+    }
+  }
+
+  try {
+    await adminApp.firestore().collection("users").doc(uid).update({
+      displayName,
+      username,
+    });
+    await getAuth(adminApp).updateUser(uid, { displayName: username });
+     revalidatePath(`/profile/${username}`);
+     return { success: true, errors: {} };
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    return { errors: { _form: ["Failed to update profile."] } };
+  }
 }

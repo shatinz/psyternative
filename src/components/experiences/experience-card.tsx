@@ -31,7 +31,7 @@ export default function ExperienceCard({ experience }: ExperienceCardProps) {
             <Badge variant={variant}>{label}</Badge>
         </div>
         <CardDescription>
-          توسط {experience.author} در {formattedDate}
+          توسط <Link href={`/profile/${experience.author}`} className="hover:underline text-muted-foreground/90">{experience.author}</Link> در {formattedDate}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
