@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview An AI agent that provides advice on an experience report.
@@ -59,6 +60,7 @@ You will receive an experience report and its type (psychedelics, dreams, or med
 Experience Type: {{{experienceType}}}
 Experience Report:
 {{reportText}}`,
+  model: 'googleai/gemini-1.0-pro',
 });
 
 const adviseOnExperienceReportFlow = ai.defineFlow(

@@ -4,23 +4,26 @@ import { AlertCircle, FileText, Link as LinkIcon, AlertTriangle } from "lucide-r
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import Link from "next/link";
+import { AdviseOnExperienceReportOutput } from "@/ai/flows/advise-on-experience-report";
 
 interface AiAdvisorProps {
   experience: ExperienceReport;
 }
 
-const IconMapping = {
-  warnings: <AlertTriangle className="h-4 w-4" />,
-  cautions: <AlertCircle className="h-4 w-4" />,
-  relevantLinks: <LinkIcon className="h-4 w-4" />,
-  relatedReports: <FileText className="h-4 w-4" />,
-};
-
 export default async function AiAdvisor({ experience }: AiAdvisorProps) {
-  const advice = await adviseOnExperienceReport({
-    reportText: experience.reportText,
-    experienceType: experience.experienceType,
-  });
+  let advice: AdviseOnExperienceReportOutput | null = null;
+  
+  try {
+    advice = await adviseOnExperienceReport({
+      reportText: experience.reportText,
+      experienceType: experience.experienceType,
+    });
+  } catch (error) {
+    console.error("AI Advisor feature failed:", error);
+    // Render nothing if the AI feature fails.
+    return null;
+  }
+
 
   if (!advice) {
     return null;
@@ -65,7 +68,7 @@ export default async function AiAdvisor({ experience }: AiAdvisorProps) {
           {advice.cautions && advice.cautions.length > 0 && (
             <div>
               <h3 className="font-headline text-lg font-semibold mb-2 flex items-center gap-2">
-                {IconMapping.cautions} ملاحظات
+                <AlertCircle className="h-4 w-4" /> ملاحظات
               </h3>
               <ul className="list-disc pr-5 space-y-1 text-muted-foreground">
                 {advice.cautions.map((caution, index) => (
@@ -78,7 +81,7 @@ export default async function AiAdvisor({ experience }: AiAdvisorProps) {
           {advice.relevantLinks && advice.relevantLinks.length > 0 && (
             <div>
               <h3 className="font-headline text-lg font-semibold mb-2 flex items-center gap-2">
-                {IconMapping.relevantLinks} لینک‌های مرتبط
+                <LinkIcon className="h-4 w-4" /> لینک‌های مرتبط
               </h3>
               <ul className="list-disc pr-5 space-y-1">
                 {advice.relevantLinks.map((link, index) => (
@@ -95,7 +98,7 @@ export default async function AiAdvisor({ experience }: AiAdvisorProps) {
           {advice.relatedReports && advice.relatedReports.length > 0 && (
             <div>
               <h3 className="font-headline text-lg font-semibold mb-2 flex items-center gap-2">
-                {IconMapping.relatedReports} گزارشات مشابه
+                <FileText className="h-4 w-4" /> گزارشات مشابه
               </h3>
               <ul className="list-disc pr-5 space-y-1">
                 {advice.relatedReports.map((reportId, index) => (
