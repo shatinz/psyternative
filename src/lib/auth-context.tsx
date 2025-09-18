@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { User } from "firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
-import { createUserProfile, getUserProfile } from "./data";
+import { createUserProfile, getUserProfile, isUsernameUnique } from "./data";
 import { getAuth } from "firebase-admin/auth";
 import { adminApp } from "./firebase-admin";
 
@@ -30,11 +30,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        const token = await user.getIdToken();
-        const tokenResult = await user.getIdTokenResult();
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser);
+        const token = await firebaseUser.getIdToken();
+        const tokenResult = await firebaseUser.getIdTokenResult();
         const claimsUsername = tokenResult.claims.username as string | undefined;
 
         setIdToken(token);
@@ -42,24 +42,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (claimsUsername) {
             setUsername(claimsUsername);
         } else {
-            // This might be a new user, let's check their profile
-            let userProfile = await getUserProfile(user.uid);
-            if (userProfile) {
+            // This case handles users signing in for the first time,
+            // especially with Google where the profile might not exist yet.
+            let userProfile = await getUserProfile(firebaseUser.uid);
+            if (userProfile?.username) {
                 setUsername(userProfile.username);
+                 // TODO: We should ideally set the custom claim on the server here
+                 // if it's missing, but that requires a server endpoint.
             } else {
                 // If profile doesn't exist (e.g., first Google Sign-In), create it.
-                const newUsername = user.email?.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user_${Date.now()}`;
+                const baseUsername = firebaseUser.email?.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user_${Date.now()}`;
+                let finalUsername = baseUsername;
+
+                // Ensure username is unique
+                let isUnique = await isUsernameUnique(finalUsername);
+                while(!isUnique) {
+                    finalUsername = `${baseUsername}_${Math.random().toString(36).substring(2, 6)}`;
+                    isUnique = await isUsernameUnique(finalUsername);
+                }
+
                 const profileData = {
-                    email: user.email!,
-                    username: newUsername,
-                    displayName: user.displayName || newUsername,
+                    email: firebaseUser.email!,
+                    username: finalUsername,
+                    displayName: firebaseUser.displayName || finalUsername,
                     createdAt: new Date(),
                 };
-                await createUserProfile(user.uid, profileData);
-                // We can't set custom claims from the client, 
-                // so we just set the username locally for this session.
+                await createUserProfile(firebaseUser.uid, profileData);
+                // We can't set custom claims from the client.
                 // The claim will be set on the next server-side action or re-login.
-                setUsername(newUsername);
+                // For now, we set it locally for the current session.
+                setUsername(finalUsername);
             }
         }
       } else {

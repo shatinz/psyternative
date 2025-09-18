@@ -20,33 +20,26 @@ import {
 
 // --- Data Transformation Functions ---
 
-async function experienceFromDoc(doc: any): Promise<ExperienceReport> {
+async function experienceFromDoc(doc: any, allUsers: Map<string, UserProfile>): Promise<ExperienceReport> {
   const data = doc.data();
   
-  const commentsData = data.comments || [];
-  const authorIds = [data.authorId, ...commentsData.map((c: any) => c.authorId)];
-  const uniqueAuthorIds = [...new Set(authorIds)].filter(id => id);
+  const authorUsername = allUsers.get(data.authorId)?.username || "Anonymous";
 
-  let authors: { [key: string]: UserProfile } = {};
-
-  if (uniqueAuthorIds.length > 0) {
-      const usersSnapshot = await getDocs(query(collection(db, "users"), where("uid", "in", uniqueAuthorIds)));
-      usersSnapshot.forEach(userDoc => {
-          const userData = userDoc.data() as UserProfile;
-          authors[userData.uid] = userData;
-      });
-  }
+  const comments = (data.comments || []).map((comment: any) => {
+      const commentAuthorUsername = allUsers.get(comment.authorId)?.username || "Anonymous";
+      return {
+          ...comment,
+          author: commentAuthorUsername,
+          createdAt: (comment.createdAt as Timestamp).toDate(),
+      }
+  }).sort((a: Comment, b: Comment) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return {
     id: doc.id,
     ...data,
-    author: authors[data.authorId]?.username || "Anonymous",
+    author: authorUsername,
     createdAt: (data.createdAt as Timestamp).toDate(),
-    comments: commentsData.map((comment: any) => ({
-      ...comment,
-      author: authors[comment.authorId]?.username || "Anonymous",
-      createdAt: (comment.createdAt as Timestamp).toDate(),
-    })).sort((a: Comment, b: Comment) => b.createdAt.getTime() - a.createdAt.getTime()),
+    comments: comments,
   } as ExperienceReport;
 }
 
@@ -64,7 +57,42 @@ export async function getExperiences(qs?: string, category?: ExperienceCategory)
   }
 
   const experienceSnapshot = await getDocs(q);
-  const experienceList = await Promise.all(experienceSnapshot.docs.map(experienceFromDoc));
+  
+  // Get all unique authorIds from all experiences and their comments first
+  const authorIds = new Set<string>();
+  experienceSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if(data.authorId) authorIds.add(data.authorId);
+      if(data.comments) {
+          data.comments.forEach((c: any) => {
+              if(c.authorId) authorIds.add(c.authorId);
+          });
+      }
+  });
+
+  // Fetch all required user profiles in a single query if there are any
+  const allUsers = new Map<string, UserProfile>();
+  const idsToFetch = Array.from(authorIds);
+
+  if (idsToFetch.length > 0) {
+      // Firestore 'in' queries are limited to 30 elements.
+      // We need to batch the requests if there are more than 30 authors.
+      const userBatches: Promise<any>[] = [];
+      for (let i = 0; i < idsToFetch.length; i += 30) {
+          const batch = idsToFetch.slice(i, i + 30);
+          userBatches.push(getDocs(query(collection(db, "users"), where("uid", "in", batch))));
+      }
+      
+      const userSnapshots = await Promise.all(userBatches);
+      userSnapshots.forEach(userSnapshot => {
+          userSnapshot.forEach((userDoc: any) => {
+              const userData = userDoc.data() as UserProfile;
+              allUsers.set(userData.uid, userData);
+          });
+      });
+  }
+
+  const experienceList = await Promise.all(experienceSnapshot.docs.map(doc => experienceFromDoc(doc, allUsers)));
 
   if (qs) {
     const lowercasedQuery = qs.toLowerCase();
@@ -83,7 +111,38 @@ export async function getExperienceById(id: string): Promise<ExperienceReport | 
   const experienceDoc = await getDoc(experienceDocRef);
 
   if (experienceDoc.exists()) {
-    return experienceFromDoc(experienceDoc);
+    // This function can be simpler and also leverage the batched approach if it becomes a bottleneck.
+    // For a single document, fetching authors one by one is acceptable.
+    const data = experienceDoc.data();
+    const authorIds = new Set<string>();
+    if (data.authorId) authorIds.add(data.authorId);
+    if (data.comments) {
+        data.comments.forEach((c:any) => {
+            if(c.authorId) authorIds.add(c.authorId)
+        });
+    }
+
+    const allUsers = new Map<string, UserProfile>();
+    const idsToFetch = Array.from(authorIds);
+     if (idsToFetch.length > 0) {
+      // Firestore 'in' queries are limited to 30 elements.
+      // We need to batch the requests if there are more than 30 authors.
+      const userBatches: Promise<any>[] = [];
+      for (let i = 0; i < idsToFetch.length; i += 30) {
+          const batch = idsToFetch.slice(i, i + 30);
+          userBatches.push(getDocs(query(collection(db, "users"), where("uid", "in", batch))));
+      }
+      
+      const userSnapshots = await Promise.all(userBatches);
+      userSnapshots.forEach(userSnapshot => {
+          userSnapshot.forEach((userDoc: any) => {
+              const userData = userDoc.data() as UserProfile;
+              allUsers.set(userData.uid, userData);
+          });
+      });
+  }
+
+    return experienceFromDoc(experienceDoc, allUsers);
   } else {
     return undefined;
   }
@@ -91,20 +150,25 @@ export async function getExperienceById(id: string): Promise<ExperienceReport | 
 
 export async function createExperience(data: { title: string; reportText: string; experienceType: ExperienceCategory; summary: string, authorId: string }): Promise<ExperienceReport> {
   const newExperienceData = {
+    ...data,
     createdAt: serverTimestamp(),
     comments: [],
-    ...data,
   };
 
   const docRef = await addDoc(collection(db, "experiences"), newExperienceData);
-  const createdDoc = await getDoc(docRef);
+  const createdDocSnap = await getDoc(docRef);
+  const createdDocData = createdDocSnap.data();
 
   const authorProfile = await getUserProfile(data.authorId);
 
   return {
     id: docRef.id,
-    ...newExperienceData,
-    createdAt: (createdDoc.data()?.createdAt as Timestamp).toDate(),
+    title: data.title,
+    reportText: data.reportText,
+    experienceType: data.experienceType,
+    summary: data.summary,
+    authorId: data.authorId,
+    createdAt: (createdDocData?.createdAt as Timestamp).toDate(),
     author: authorProfile?.username ?? 'Anonymous',
     comments: []
   };
@@ -112,24 +176,24 @@ export async function createExperience(data: { title: string; reportText: string
 
 export async function addComment(experienceId: string, data: { text: string; authorId: string }): Promise<Comment | null> {
     const experienceRef = doc(db, "experiences", experienceId);
-    const experienceSnap = await getDoc(experienceRef);
-
-    if (!experienceSnap.exists()) return null;
-
-    const newComment: any = {
+    
+    const newCommentData = {
         id: `c${Math.random().toString(36).substring(2, 9)}`,
+        text: data.text,
+        authorId: data.authorId,
         createdAt: serverTimestamp(),
-        ...data,
     };
     
     await updateDoc(experienceRef, {
-        comments: arrayUnion(newComment)
+        comments: arrayUnion(newCommentData)
     });
     
     const authorProfile = await getUserProfile(data.authorId);
 
+    // Note: serverTimestamp will be null on the client until it's processed by the server.
+    // We return the current date for immediate UI updates.
     return {
-        ...newComment,
+        ...newCommentData,
         createdAt: new Date(),
         author: authorProfile?.username ?? 'Anonymous',
     };
@@ -137,9 +201,14 @@ export async function addComment(experienceId: string, data: { text: string; aut
 
 // --- User Profile Functions ---
 
-export async function createUserProfile(uid: string, data: Omit<UserProfile, 'uid'>) {
+export async function createUserProfile(uid: string, data: Omit<UserProfile, 'uid' | 'createdAt'> & {createdAt?: Date}) {
     const userRef = doc(db, "users", uid);
-    return setDoc(userRef, { ...data, uid });
+    const profileData = {
+        ...data,
+        uid,
+        createdAt: data.createdAt ? Timestamp.fromDate(data.createdAt) : serverTimestamp()
+    };
+    return setDoc(userRef, profileData);
 }
 
 
@@ -149,10 +218,12 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     if (userSnap.exists()) {
         const userData = userSnap.data();
         return {
-            ...userData,
             uid: userSnap.id,
+            username: userData.username,
+            displayName: userData.displayName,
+            email: userData.email,
             createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
-        } as UserProfile;
+        };
     }
     return null;
 }
