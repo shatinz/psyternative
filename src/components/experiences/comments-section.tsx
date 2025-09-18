@@ -26,11 +26,11 @@ function SubmitButton() {
 }
 
 export default function CommentsSection({ experienceId, comments }: CommentsSectionProps) {
-  const [state, formAction] = useActionState(addCommentAction, { errors: {} });
+  const [state, formAction] = useActionState(addCommentAction, { errors: { _form: [] } });
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    if(!state.errors || Object.keys(state.errors).length === 0){
+    if(!state.errors || Object.keys(state.errors).length === 0 || (Object.keys(state.errors).length === 1 && state.errors._form?.length === 0) ){
         formRef.current?.reset();
     }
   }, [state]);
@@ -51,6 +51,7 @@ export default function CommentsSection({ experienceId, comments }: CommentsSect
                         <Textarea id="comment-text" name="text" placeholder="نظر شما..." rows={4} />
                         {state.errors?.text && <p className="text-sm text-destructive">{state.errors.text[0]}</p>}
                     </div>
+                    {state.errors?._form && state.errors._form.length > 0 && <p className="text-sm text-destructive">{state.errors._form[0]}</p>}
                     <SubmitButton />
                 </form>
             </CardContent>

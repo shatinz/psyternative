@@ -4,7 +4,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { summarizeExperienceReport } from "@/ai/flows/summarize-experience-reports";
 import { addComment, createExperience } from "./data";
 
 const experienceSchema = z.object({
@@ -27,18 +26,23 @@ export async function createExperienceAction(
 
   if (!validatedFields.success) {
     return {
-      errors: validatedFields.error.flatten().fieldErrors,
+      errors: {
+        ...validatedFields.error.flatten().fieldErrors,
+        _form: [],
+      }
     };
   }
 
   try {
+    // AI summary is disabled for now
     const newExperience = {
       ...validatedFields.data,
-      summary: validatedFields.data.reportText.substring(0, 150) + "...",
+      summary: validatedFields.data.reportText.substring(0, 100) + "...",
     };
 
     const created = createExperience(newExperience);
     revalidatePath("/experiences");
+    revalidatePath("/");
     redirect(`/experiences/${created.id}`);
   } catch (error) {
     console.error("Failed to create experience:", error);
@@ -66,7 +70,10 @@ export async function addCommentAction(
 
     if(!validatedFields.success) {
         return {
-            errors: validatedFields.error.flatten().fieldErrors,
+            errors: {
+              ...validatedFields.error.flatten().fieldErrors,
+              _form: [],
+            }
         }
     }
 
@@ -76,7 +83,7 @@ export async function addCommentAction(
         });
         revalidatePath(`/experiences/${validatedFields.data.experienceId}`);
         return {
-            errors: {}
+            errors: { _form: [] }
         }
     } catch (error) {
         console.error("Failed to add comment:", error);

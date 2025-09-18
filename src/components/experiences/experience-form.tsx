@@ -23,12 +23,12 @@ function SubmitButton() {
 }
 
 export default function ExperienceForm() {
-  const [state, formAction] = useActionState(createExperienceAction, { errors: {} });
+  const [state, formAction] = useActionState(createExperienceAction, { errors: { _form: [] } });
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (state.errors?._form) {
+    if (state.errors?._form && state.errors._form.length > 0) {
       toast({
         title: "خطا",
         description: state.errors._form[0],
@@ -79,7 +79,7 @@ export default function ExperienceForm() {
               <p className="text-sm text-destructive">{state.errors.reportText[0]}</p>
             )}
           </div>
-          {state.errors?._form && (
+          {state.errors?._form && state.errors?._form.length > 0 && (
              <Alert variant="destructive">
                 <AlertDescription>{state.errors._form[0]}</AlertDescription>
              </Alert>
