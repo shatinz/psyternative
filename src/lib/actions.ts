@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addComment, createExperience } from "./data";
 import type { ExperienceReport } from "@/types";
-import { Auth, UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "./firebase";
 import { getAuth } from "firebase-admin/auth";
 import { adminApp } from "./firebase-admin";
@@ -37,6 +37,10 @@ export async function createExperienceAction(
     };
   }
 
+  if (!adminApp) {
+    return { errors: { _form: ["Firebase Admin SDK not initialized."] } };
+  }
+
   let decodedToken;
   try {
     decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
@@ -48,10 +52,8 @@ export async function createExperienceAction(
 
   if (!validatedFields.success) {
     return {
-      errors: {
-        ...prevState.errors,
-        ...validatedFields.error.flatten().fieldErrors,
-      }
+      errors: validatedFields.error.flatten().fieldErrors,
+      ran: false,
     };
   }
 
@@ -72,6 +74,7 @@ export async function createExperienceAction(
         errors: {
           _form: ["شیء تجربه ایجاد شد اما شناسه ای دریافت نکرد."],
         },
+        ran: true,
       };
     }
 
@@ -81,6 +84,7 @@ export async function createExperienceAction(
       errors: {
         _form: ["خطایی در هنگام ایجاد تجربه رخ داد. لطفا دوباره تلاش کنید."],
       },
+      ran: true,
     };
   }
   
@@ -108,6 +112,10 @@ export async function addCommentAction(
       return { errors: { _form: ["You must be logged in to comment."] } };
     }
 
+    if (!adminApp) {
+      return { errors: { _form: ["Firebase Admin SDK not initialized."] } };
+    }
+
     let decodedToken;
     try {
       decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
@@ -119,10 +127,7 @@ export async function addCommentAction(
 
     if(!validatedFields.success) {
         return {
-            errors: {
-              ...prevState.errors,
-              ...validatedFields.error.flatten().fieldErrors,
-            }
+            errors: validatedFields.error.flatten().fieldErrors,
         }
     }
 
@@ -154,14 +159,14 @@ const authSchema = z.object({
 async function firebaseAuthAction(
   formData: FormData,
   action: "signUp" | "signIn"
-): Promise<{ errors: { _form?: string[] } }> {
+): Promise<{ errors: any, ran: boolean }> {
   const validatedFields = authSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
 
   if (!validatedFields.success) {
-    return { errors: validatedFields.error.flatten().fieldErrors };
+    return { errors: validatedFields.error.flatten().fieldErrors, ran: true };
   }
 
   try {
@@ -180,9 +185,7 @@ async function firebaseAuthAction(
       );
     }
     
-    // The client will handle the redirect on successful login.
-    // We return a success state with the user object, which the client can use.
-    return { errors: {} };
+    return { errors: {}, ran: true };
 
   } catch (error: any) {
     console.error(`Firebase ${action} error:`, error);
@@ -200,6 +203,9 @@ async function firebaseAuthAction(
         case "auth/weak-password":
           errorMessage = "The password is too weak.";
           break;
+        case "auth/configuration-not-found":
+          errorMessage = "Authentication is not enabled in your Firebase project. Please enable Email/Password sign-in in the Firebase console.";
+          break;
         default:
           errorMessage = "Authentication failed. Please try again.";
       }
@@ -208,14 +214,17 @@ async function firebaseAuthAction(
       errors: {
         _form: [errorMessage],
       },
+      ran: true
     };
   }
 }
 
 export async function signUpAction(prevState: any, formData: FormData) {
-  return firebaseAuthAction(formData, "signUp");
+  const result = await firebaseAuthAction(formData, "signUp");
+  return result;
 }
 
 export async function signInAction(prevState: any, formData: FormData) {
-  return firebaseAuthAction(formData, "signIn");
+  const result = await firebaseAuthAction(formData, "signIn");
+  return result;
 }

@@ -23,7 +23,7 @@ function SubmitButton() {
 }
 
 export default function LoginPage() {
-  const [state, formAction] = useActionState(signInAction, { errors: {} });
+  const [state, formAction] = useActionState(signInAction, { errors: {}, ran: false });
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -35,17 +35,14 @@ export default function LoginPage() {
   }, [user, router]);
   
   useEffect(() => {
-    if (state.errors?._form) {
+    if (state.ran && state.errors?._form) {
       toast({
         title: "خطا در ورود",
         description: state.errors._form[0],
         variant: "destructive",
       });
-    } else if (Object.keys(state.errors).length === 0 && state.ran) {
-        // This means the action was successful
-        // The user object update will trigger the redirect
     }
-  }, [state, toast, router]);
+  }, [state, toast]);
 
 
   if (loading || user) {

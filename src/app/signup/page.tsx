@@ -23,7 +23,7 @@ function SubmitButton() {
 }
 
 export default function SignUpPage() {
-  const [state, formAction] = useActionState(signUpAction, { errors: {} });
+  const [state, formAction] = useActionState(signUpAction, { errors: {}, ran: false });
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -35,17 +35,14 @@ export default function SignUpPage() {
   }, [user, router]);
   
   useEffect(() => {
-    if (state.errors?._form) {
+    if (state.ran && state.errors?._form) {
       toast({
         title: "خطا در ثبت نام",
         description: state.errors._form[0],
         variant: "destructive",
       });
-    } else if (Object.keys(state.errors).length === 0 && state.ran) {
-      // Successful sign up, the user object will be updated by AuthProvider,
-      // which triggers the redirect.
     }
-  }, [state, toast, router]);
+  }, [state, toast]);
 
   if (loading || user) {
     return <div className="container text-center p-8">در حال بارگذاری...</div>;
