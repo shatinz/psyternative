@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Search, Menu, X } from "lucide-react";
+import { Search, Menu, LogOut, UserPlus, LogIn } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "../ui/button";
@@ -10,6 +10,9 @@ import Logo from "../logo";
 import { cn } from "@/lib/utils";
 import React from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../ui/sheet";
+import { useAuth } from "@/lib/auth-context";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 const navLinks = [
   { href: "/", label: "خانه" },
@@ -21,6 +24,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const { user, loading } = useAuth();
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -31,6 +35,77 @@ export default function Header() {
       setIsMenuOpen(false);
     }
   };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/');
+    setIsMenuOpen(false);
+  }
+
+  const AuthNav = () => {
+    if (loading) return null;
+
+    if (user) {
+      return (
+        <Button onClick={handleLogout} variant="ghost" size="sm">
+          <LogOut className="ml-2 h-4 w-4" />
+          خروج
+        </Button>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-2">
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/login">
+            <LogIn className="ml-2 h-4 w-4" />
+            ورود
+          </Link>
+        </Button>
+        <Button asChild size="sm">
+          <Link href="/signup">
+            <UserPlus className="ml-2 h-4 w-4" />
+            ثبت نام
+          </Link>
+        </Button>
+      </div>
+    );
+  };
+  
+  const MobileAuthNav = () => {
+    if (loading) return null;
+
+    if (user) {
+      return (
+        <Button onClick={handleLogout} variant="ghost" className="w-full justify-start text-lg">
+          <LogOut className="ml-2 h-5 w-5" />
+          خروج
+        </Button>
+      );
+    }
+
+    return (
+      <>
+        <Link
+            href="/login"
+            className="text-lg text-muted-foreground transition-colors hover:text-primary"
+            onClick={() => setIsMenuOpen(false)}
+        >
+            <LogIn className="ml-2 inline h-5 w-5" />
+            ورود
+        </Link>
+        <Link
+            href="/signup"
+            className="text-lg text-muted-foreground transition-colors hover:text-primary"
+            onClick={() => setIsMenuOpen(false)}
+        >
+            <UserPlus className="ml-2 inline h-5 w-5" />
+            ثبت نام
+        </Link>
+      </>
+    );
+  }
+
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -69,6 +144,9 @@ export default function Header() {
               <Search className="h-4 w-4" />
             </Button>
           </form>
+          <div className="hidden md:flex">
+             <AuthNav />
+          </div>
           <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -77,11 +155,11 @@ export default function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Menu</SheetTitle>
-              </SheetHeader>
-              <div className="flex flex-col h-full p-6">
-                <div className="mb-8">
+               <SheetHeader className="text-left">
+                  <SheetTitle className="sr-only">Menu</SheetTitle>
+               </SheetHeader>
+              <div className="flex flex-col h-full p-6 pt-0">
+                <div className="mb-8 mt-6">
                   <Logo />
                 </div>
                 <nav className="flex flex-col gap-6 text-lg font-medium">
@@ -99,6 +177,9 @@ export default function Header() {
                     </Link>
                   ))}
                 </nav>
+                 <div className="mt-6 flex flex-col gap-6">
+                    <MobileAuthNav />
+                 </div>
                 <form onSubmit={handleSearch} className="mt-8 relative w-full items-center">
                   <Input
                     type="search"

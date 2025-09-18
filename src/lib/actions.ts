@@ -6,6 +6,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addComment, createExperience } from "./data";
 import type { ExperienceReport } from "@/types";
+import { Auth, UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "./firebase";
+import { getAuth } from "firebase-admin/auth";
+import { adminApp } from "./firebase-admin";
 
 const experienceSchema = z.object({
   title: z.string().min(3, "عنوان باید حداقل ۳ حرف داشته باشد."),
@@ -16,14 +20,31 @@ const experienceSchema = z.object({
 });
 
 export async function createExperienceAction(
-  prevState: { errors: { _form?: string[] } },
+  prevState: any,
   formData: FormData
-): Promise<{ errors: { _form?: string[] } }> {
+) {
   const validatedFields = experienceSchema.safeParse({
     title: formData.get("title"),
     reportText: formData.get("reportText"),
     experienceType: formData.get("experienceType"),
   });
+  
+  const idToken = formData.get("idToken") as string;
+  
+  if (!idToken) {
+    return {
+      errors: { _form: ["You must be logged in to create an experience."] },
+    };
+  }
+
+  let decodedToken;
+  try {
+    decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
+  } catch (error) {
+    return { errors: { _form: ["Invalid authentication token. Please log in again."] } };
+  }
+
+  const authorName = decodedToken.name || decodedToken.email || "Anonymous";
 
   if (!validatedFields.success) {
     return {
@@ -41,6 +62,7 @@ export async function createExperienceAction(
     const experienceData = {
       ...validatedFields.data,
       summary: summary,
+      author: authorName
     };
 
     newExperience = await createExperience(experienceData);
@@ -73,13 +95,27 @@ const commentSchema = z.object({
 });
 
 export async function addCommentAction(
-  prevState: { errors: { _form?: string[] } },
+  prevState: any,
   formData: FormData
 ) {
     const validatedFields = commentSchema.safeParse({
         text: formData.get('text'),
         experienceId: formData.get('experienceId'),
     });
+    
+    const idToken = formData.get("idToken") as string;
+    if (!idToken) {
+      return { errors: { _form: ["You must be logged in to comment."] } };
+    }
+
+    let decodedToken;
+    try {
+      decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
+    } catch (error) {
+      return { errors: { _form: ["Invalid authentication token. Please log in again."] } };
+    }
+    const authorName = decodedToken.name || decodedToken.email || "Anonymous";
+
 
     if(!validatedFields.success) {
         return {
@@ -93,6 +129,7 @@ export async function addCommentAction(
     try {
         await addComment(validatedFields.data.experienceId, {
             text: validatedFields.data.text,
+            author: authorName,
         });
         revalidatePath(`/experiences/${validatedFields.data.experienceId}`);
         return {
@@ -106,4 +143,79 @@ export async function addCommentAction(
             }
         }
     }
+}
+
+
+const authSchema = z.object({
+  email: z.string().email("Please enter a valid email address."),
+  password: z.string().min(6, "Password must be at least 6 characters long."),
+});
+
+async function firebaseAuthAction(
+  formData: FormData,
+  action: "signUp" | "signIn"
+): Promise<{ errors: { _form?: string[] } }> {
+  const validatedFields = authSchema.safeParse({
+    email: formData.get("email"),
+    password: formData.get("password"),
+  });
+
+  if (!validatedFields.success) {
+    return { errors: validatedFields.error.flatten().fieldErrors };
+  }
+
+  try {
+    let userCredential: UserCredential;
+    if (action === "signUp") {
+      userCredential = await createUserWithEmailAndPassword(
+        auth,
+        validatedFields.data.email,
+        validatedFields.data.password
+      );
+    } else {
+      userCredential = await signInWithEmailAndPassword(
+        auth,
+        validatedFields.data.email,
+        validatedFields.data.password
+      );
+    }
+    
+    // The client will handle the redirect on successful login.
+    // We return a success state with the user object, which the client can use.
+    return { errors: {} };
+
+  } catch (error: any) {
+    console.error(`Firebase ${action} error:`, error);
+    let errorMessage = "An unexpected error occurred. Please try again.";
+    if (error.code) {
+      switch (error.code) {
+        case "auth/email-already-in-use":
+          errorMessage = "This email is already registered.";
+          break;
+        case "auth/user-not-found":
+        case "auth/wrong-password":
+        case "auth/invalid-credential":
+          errorMessage = "Invalid email or password.";
+          break;
+        case "auth/weak-password":
+          errorMessage = "The password is too weak.";
+          break;
+        default:
+          errorMessage = "Authentication failed. Please try again.";
+      }
+    }
+    return {
+      errors: {
+        _form: [errorMessage],
+      },
+    };
+  }
+}
+
+export async function signUpAction(prevState: any, formData: FormData) {
+  return firebaseAuthAction(formData, "signUp");
+}
+
+export async function signInAction(prevState: any, formData: FormData) {
+  return firebaseAuthAction(formData, "signIn");
 }

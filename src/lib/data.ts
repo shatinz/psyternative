@@ -26,7 +26,7 @@ function experienceFromDoc(doc: any): ExperienceReport {
     comments: (data.comments || []).map((comment: any) => ({
       ...comment,
       createdAt: (comment.createdAt as Timestamp).toDate(),
-    })),
+    })).sort((a: Comment, b: Comment) => b.createdAt.getTime() - a.createdAt.getTime()),
   } as ExperienceReport;
 }
 
@@ -69,9 +69,8 @@ export async function getExperienceById(id: string): Promise<ExperienceReport | 
   }
 }
 
-export async function createExperience(data: { title: string; reportText: string; experienceType: ExperienceCategory; summary: string }): Promise<ExperienceReport> {
+export async function createExperience(data: { title: string; reportText: string; experienceType: ExperienceCategory; summary: string, author: string }): Promise<ExperienceReport> {
   const newExperienceData = {
-    author: "کاربر جدید", // In a real app, this would come from auth
     createdAt: new Date(),
     comments: [],
     ...data,
@@ -85,7 +84,7 @@ export async function createExperience(data: { title: string; reportText: string
   };
 }
 
-export async function addComment(experienceId: string, data: { text: string }): Promise<Comment | null> {
+export async function addComment(experienceId: string, data: { text: string; author: string }): Promise<Comment | null> {
     const experienceRef = doc(db, "experiences", experienceId);
     const experienceSnap = await getDoc(experienceRef);
 
@@ -93,7 +92,6 @@ export async function addComment(experienceId: string, data: { text: string }): 
 
     const newComment: any = {
         id: `c${Math.random().toString(36).substring(2, 9)}`,
-        author: "ناشناس", // In a real app, this would come from auth
         createdAt: new Date(),
         ...data,
     };

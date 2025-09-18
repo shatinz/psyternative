@@ -9,9 +9,12 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Button } from "../ui/button";
-import { Alert, AlertDescription } from "../ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useEffect, useRef, useActionState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import Link from "next/link";
+import { LogIn } from "lucide-react";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -24,9 +27,9 @@ function SubmitButton() {
 
 export default function ExperienceForm() {
   const [state, formAction] = useActionState(createExperienceAction, { errors: { _form: [] } });
-  const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
-
+  const { user, loading, idToken } = useAuth();
+  
   useEffect(() => {
     if (state.errors?._form && state.errors._form.length > 0) {
       toast({
@@ -36,10 +39,36 @@ export default function ExperienceForm() {
       });
     }
   }, [state, toast]);
+  
+  if (loading) {
+    return <div className="text-center">در حال بارگذاری...</div>;
+  }
+
+  if (!user) {
+    return (
+      <Card className="text-center p-8">
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">ابتدا وارد شوید</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground mb-6">
+            برای ثبت تجربه جدید باید وارد حساب کاربری خود شوید.
+          </p>
+          <Button asChild>
+            <Link href="/login">
+              <LogIn className="ml-2" />
+              ورود به حساب کاربری
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
-      <form ref={formRef} action={formAction}>
+      <form action={formAction}>
+        <input type="hidden" name="idToken" value={idToken ?? ""} />
         <CardHeader>
           <CardTitle className="font-headline text-2xl">جزئیات تجربه</CardTitle>
         </CardHeader>
