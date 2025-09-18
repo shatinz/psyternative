@@ -41,6 +41,15 @@ export async function createExperienceAction(
     };
 
     const created = createExperience(newExperience);
+
+    if (!created?.id) {
+       return {
+        errors: {
+          _form: ["خطایی در هنگام ایجاد شناسه تجربه رخ داد. لطفا دوباره تلاش کنید."],
+        },
+      };
+    }
+
     revalidatePath("/experiences");
     revalidatePath("/");
     redirect(`/experiences/${created.id}`);
