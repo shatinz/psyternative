@@ -6,8 +6,6 @@ import type { User } from "firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import { createUserProfile, getUserProfile, isUsernameUnique } from "./data";
-import { getAuth } from "firebase-admin/auth";
-import { adminApp } from "./firebase-admin";
 
 interface AuthContextType {
   user: User | null;
@@ -30,65 +28,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("AuthProvider: useEffect initiated.");
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("AuthProvider: onAuthStateChanged event fired.");
       setLoading(true);
       if (firebaseUser) {
-        // User is signed in.
+        console.log(`AuthProvider: User found with UID: ${firebaseUser.uid}. Fetching token and profile.`);
         const tokenResult = await firebaseUser.getIdTokenResult();
-        const claimsUsername = tokenResult.claims.username as string | undefined;
-
+        
         let userProfile = await getUserProfile(firebaseUser.uid);
         
-        // This is the core logic fix:
-        // If the user exists in Auth but not in our database, it means it's their first login.
-        // We must create their profile document now.
         if (!userProfile) {
-          console.log("User profile not found, creating a new one...");
+          console.log(`AuthProvider: No profile found for UID: ${firebaseUser.uid}. Creating new profile.`);
           const baseUsername = firebaseUser.email?.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user_${Date.now()}`;
           let finalUsername = baseUsername;
 
-          // Ensure username is unique before creating
           let isUnique = await isUsernameUnique(finalUsername);
           let attempts = 0;
           while(!isUnique && attempts < 5) {
+              console.log(`AuthProvider: Username ${finalUsername} is not unique. Trying again.`);
               finalUsername = `${baseUsername}_${Math.random().toString(36).substring(2, 6)}`;
               isUnique = await isUsernameUnique(finalUsername);
               attempts++;
           }
-          if (!isUnique) finalUsername = `user_${firebaseUser.uid.substring(0, 5)}` // Fallback
+          if (!isUnique) finalUsername = `user_${firebaseUser.uid.substring(0, 5)}`
 
           const profileData = {
               email: firebaseUser.email!,
               username: finalUsername,
               displayName: firebaseUser.displayName || finalUsername,
-              createdAt: new Date(),
           };
-          await createUserProfile(firebaseUser.uid, profileData);
-          console.log("New user profile created:", profileData);
           
-          // We can't set custom claims from the client.
-          // The claim will be set on the next server-side action or after a re-login.
-          // For now, we use the username we just created for the current session.
+          await createUserProfile(firebaseUser.uid, profileData);
+          console.log("AuthProvider: New user profile created in DB:", profileData);
+          
           setUsername(finalUsername);
-          userProfile = { uid: firebaseUser.uid, ...profileData };
+          userProfile = { uid: firebaseUser.uid, createdAt: new Date(), ...profileData };
         } else {
+            console.log(`AuthProvider: Profile found for user: ${userProfile.username}`);
             setUsername(userProfile.username);
         }
 
-        // Set the user and token state
+        console.log("AuthProvider: Setting user state.");
         setUser(firebaseUser);
         setIdToken(tokenResult.token);
         
       } else {
-        // User is signed out.
+        console.log("AuthProvider: No user found. Clearing user state.");
         setUser(null);
         setIdToken(null);
         setUsername(null);
       }
+      console.log("AuthProvider: Setting loading to false.");
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+        console.log("AuthProvider: useEffect cleanup. Unsubscribing from onAuthStateChanged.");
+        unsubscribe();
+    }
   }, []);
 
   return (

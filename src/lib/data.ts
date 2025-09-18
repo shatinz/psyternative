@@ -157,22 +157,27 @@ export async function addComment(experienceId: string, data: { text: string; aut
 
 // --- User Profile Functions ---
 
-export async function createUserProfile(uid: string, data: Omit<UserProfile, 'uid' | 'createdAt'> & {createdAt?: Date}) {
+export async function createUserProfile(uid: string, data: Omit<UserProfile, 'uid' | 'createdAt'>) {
+    console.log(`DATA: createUserProfile called for UID: ${uid}`);
     const userRef = doc(db, "users", uid);
     const profileData = {
         ...data,
         uid,
-        createdAt: data.createdAt ? Timestamp.fromDate(data.createdAt) : serverTimestamp()
+        createdAt: serverTimestamp()
     };
-    return setDoc(userRef, profileData, { merge: true }); // Use merge to avoid overwriting
+    const result = await setDoc(userRef, profileData, { merge: true });
+    console.log(`DATA: createUserProfile finished for UID: ${uid}`);
+    return result;
 }
 
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+    console.log(`DATA: getUserProfile called for UID: ${uid}`);
     const userRef = doc(db, "users", uid);
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
         const userData = userSnap.data();
+        console.log(`DATA: getUserProfile found user:`, userData.username);
         return {
             uid: userSnap.id,
             username: userData.username,
@@ -181,27 +186,33 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
             createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
         };
     }
+    console.log(`DATA: getUserProfile did NOT find user for UID: ${uid}`);
     return null;
 }
 
 export async function getUserByUsername(username: string): Promise<UserProfile | null> {
+    console.log(`DATA: getUserByUsername called for username: ${username}`);
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("username", "==", username));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
+        console.log(`DATA: getUserByUsername found user for username: ${username}`);
         return { 
             uid: userDoc.id, 
             ...userData,
             createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
         } as UserProfile;
     }
+    console.log(`DATA: getUserByUsername did NOT find user for username: ${username}`);
     return null;
 }
 
 export async function isUsernameUnique(username: string): Promise<boolean> {
+    console.log(`DATA: isUsernameUnique checking for: ${username}`);
     const user = await getUserByUsername(username);
+    console.log(`DATA: isUsernameUnique result for ${username}: ${user === null}`);
     return user === null;
 }
 

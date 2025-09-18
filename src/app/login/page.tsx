@@ -29,9 +29,12 @@ function GoogleSignInButton() {
   const { toast } = useToast();
   const handleGoogleSignIn = async () => {
     try {
+      console.log("LOGIN_PAGE: Attempting Google Sign-In.");
       await signInWithPopup(auth, googleProvider);
+      console.log("LOGIN_PAGE: Google Sign-In popup finished.");
       // The redirect is handled by the useAuth hook
     } catch (error: any) {
+       console.error("LOGIN_PAGE: Google Sign-In error:", error);
        let errorMessage = "An unexpected error occurred during Google sign-in.";
         if (error.code) {
             switch (error.code) {
@@ -66,24 +69,37 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log(`LOGIN_PAGE: Rendering. Loading: ${loading}, User: ${!!user}`);
+  }, [user, loading]);
+
+  useEffect(() => {
     if (user) {
+      console.log("LOGIN_PAGE: User is authenticated, redirecting to /");
       router.push("/");
     }
   }, [user, router]);
   
   useEffect(() => {
     if (state.ran && state.errors?._form) {
+      console.log("LOGIN_PAGE: Form action completed with error:", state.errors._form[0]);
       toast({
         title: "خطا در ورود",
         description: state.errors._form[0],
         variant: "destructive",
       });
+    } else if (state.ran && !state.errors?._form) {
+      console.log("LOGIN_PAGE: Form action successful.");
     }
   }, [state, toast]);
 
 
-  if (loading || user) {
+  if (loading) {
+    console.log("LOGIN_PAGE: Auth is loading, showing loading indicator.");
     return <div className="container text-center p-8">در حال بارگذاری...</div>;
+  }
+   if (user) {
+    console.log("LOGIN_PAGE: User exists, showing loading while redirecting.");
+    return <div className="container text-center p-8">ورود موفقیت آمیز بود. در حال انتقال...</div>;
   }
 
   return (

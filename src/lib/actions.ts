@@ -163,6 +163,7 @@ async function firebaseAuthAction(
   formData: FormData,
   action: "signUp" | "signIn"
 ): Promise<{ errors: any, ran: boolean, user?: UserCredential }> {
+  console.log(`ACTIONS: firebaseAuthAction called for '${action}'`);
   const validatedFields = authSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -175,25 +176,27 @@ async function firebaseAuthAction(
   try {
     let userCredential: UserCredential;
     if (action === "signUp") {
+      console.log(`ACTIONS: Attempting to create user with email: ${validatedFields.data.email}`);
       userCredential = await createUserWithEmailAndPassword(
         auth,
         validatedFields.data.email,
         validatedFields.data.password
       );
-      // The creation of the user profile document is now handled by the AuthProvider
-      // to ensure it happens reliably for all sign-up methods.
+      console.log(`ACTIONS: User created successfully. UID: ${userCredential.user.uid}`);
     } else {
+      console.log(`ACTIONS: Attempting to sign in user with email: ${validatedFields.data.email}`);
       userCredential = await signInWithEmailAndPassword(
         auth,
         validatedFields.data.email,
         validatedFields.data.password
       );
+      console.log(`ACTIONS: User signed in successfully. UID: ${userCredential.user.uid}`);
     }
     
     return { errors: {}, ran: true, user: userCredential };
 
   } catch (error: any) {
-    console.error(`Firebase ${action} error:`, error);
+    console.error(`ACTIONS: Firebase ${action} error:`, error);
     let errorMessage = "An unexpected error occurred. Please try again.";
     if (error.code) {
       switch (error.code) {
@@ -232,17 +235,13 @@ async function firebaseAuthAction(
 
 export async function signUpAction(prevState: any, formData: FormData) {
   const result = await firebaseAuthAction(formData, "signUp");
-  if (!result.errors._form) {
-    revalidatePath("/");
-  }
+  // Don't redirect here, let the AuthProvider handle the user state change
   return result;
 }
 
 export async function signInAction(prevState: any, formData: FormData) {
    const result = await firebaseAuthAction(formData, "signIn");
-   if (!result.errors._form) {
-    revalidatePath("/");
-  }
+   // Don't redirect here, let the AuthProvider handle the user state change
   return result;
 }
 
