@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Search, Menu, X } from "lucide-react";
@@ -8,7 +9,7 @@ import { Input } from "../ui/input";
 import Logo from "../logo";
 import { cn } from "@/lib/utils";
 import React from "react";
-import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "../ui/sheet";
 
 const navLinks = [
   { href: "/", label: "خانه" },
@@ -27,6 +28,7 @@ export default function Header() {
     const query = formData.get("q") as string;
     if (query) {
       router.push(`/search?q=${query}`);
+      setIsMenuOpen(false);
     }
   };
 
@@ -75,6 +77,9 @@ export default function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+              <SheetHeader className="sr-only">
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
               <div className="flex flex-col h-full p-6">
                 <div className="mb-8">
                   <Logo />
