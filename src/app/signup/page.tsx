@@ -69,17 +69,7 @@ export default function SignUpPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log(`SIGNUP_PAGE: Rendering. Loading: ${loading}, User: ${!!user}`);
-  }, [user, loading]);
-
-  useEffect(() => {
-    if (user) {
-      console.log("SIGNUP_PAGE: User is authenticated, redirecting to /");
-      router.push("/");
-    }
-  }, [user, router]);
-  
-  useEffect(() => {
+    // This effect now only handles showing errors from the form submission
     if (state.ran && state.errors?._form) {
       console.log("SIGNUP_PAGE: Form action completed with error:", state.errors._form[0]);
       toast({
@@ -87,17 +77,15 @@ export default function SignUpPage() {
         description: state.errors._form[0],
         variant: "destructive",
       });
-    } else if (state.ran && !state.errors?._form) {
-      console.log("SIGNUP_PAGE: Form action successful.");
     }
   }, [state, toast]);
 
+  // The AuthProvider will handle redirecting the user if they are logged in.
+  // We just show a loading state here.
   if (loading) {
-     console.log("SIGNUP_PAGE: Auth is loading, showing loading indicator.");
-    return <div className="container text-center p-8">در حال بارگذاری...</div>;
+     return <div className="container text-center p-8">در حال بارگذاری...</div>;
   }
    if (user) {
-    console.log("SIGNUP_PAGE: User exists, showing loading while redirecting.");
     return <div className="container text-center p-8">ثبت نام موفقیت آمیز بود. در حال انتقال...</div>;
   }
 
