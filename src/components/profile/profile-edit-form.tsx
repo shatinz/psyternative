@@ -23,23 +23,15 @@ export default function ProfileEditForm({ userProfile }: { userProfile: UserProf
   const { user, idToken } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
-
+  
   const [state, formAction] = useActionState(updateProfileAction, { errors: {} });
 
   useEffect(() => {
-    if (state?.success) {
-      toast({ title: "پروفایل با موفقیت بروزرسانی شد!" });
-      setIsEditing(false);
-      // We need to refresh the page to see the changes, or redirect.
-      // Redirecting to the new username URL if it changed.
-      router.push(`/profile/${state.newUsername || userProfile.username}`);
-      router.refresh();
-    }
+    // Only show toasts for form-level errors now, as success is handled by redirect.
     if (state?.errors?._form) {
       toast({ title: "خطا", description: state.errors._form[0], variant: "destructive" });
     }
-  }, [state, toast, router, userProfile.username]);
+  }, [state, toast]);
 
   if (user?.uid !== userProfile.uid) {
     return null; // Don't show edit form if not the owner

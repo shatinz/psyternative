@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { addComment, createExperience, createUserProfile, isUsernameUnique, getUserByUsername } from "./data";
+import { addComment, createExperience, createUserProfile, isUsernameUnique, getUserProfile, getExperiences } from "./data";
 import type { ExperienceReport } from "@/types";
 import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "./firebase";
@@ -34,22 +34,24 @@ export async function createExperienceAction(
   if (!idToken) {
     return {
       errors: { _form: ["You must be logged in to create an experience."] },
+      ran: true,
     };
   }
 
   if (!adminApp) {
-    return { errors: { _form: ["Firebase Admin SDK not initialized."] } };
+    return { errors: { _form: ["Firebase Admin SDK not initialized."] }, ran: true };
   }
 
   let decodedToken;
   try {
     decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
   } catch (error) {
-    return { errors: { _form: ["Invalid authentication token. Please log in again."] } };
+    return { errors: { _form: ["Invalid authentication token. Please log in again."] }, ran: true };
   }
 
   const authorId = decodedToken.uid;
-  const authorUsername = (await getUserByUsername(decodedToken.uid))?.username || 'unknown';
+  const authorProfile = await getUserProfile(authorId);
+  const authorUsername = authorProfile?.username || 'unknown';
 
   if (!validatedFields.success) {
     return {
@@ -270,7 +272,8 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
     return { errors: { _form: ["Invalid authentication token."] } };
   }
   
-  const currentUsername = (await getUserProfile(decodedToken.uid))?.username;
+  const currentProfile = await getUserProfile(decodedToken.uid);
+  const currentUsername = currentProfile?.username;
 
   const validatedFields = profileSchema.safeParse({
     displayName: formData.get("displayName"),
@@ -298,11 +301,12 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
     });
     await getAuth(adminApp).setCustomUserClaims(uid, { username: username });
 
-     revalidatePath(`/profile/${username}`);
-     if(currentUsername) revalidatePath(`/profile/${currentUsername}`);
-     return { success: true, errors: {}, newUsername: username };
   } catch (error) {
     console.error("Error updating profile:", error);
     return { errors: { _form: ["Failed to update profile."] } };
   }
+  
+  if (currentUsername) revalidatePath(`/profile/${currentUsername}`);
+  revalidatePath(`/profile/${username}`);
+  redirect(`/profile/${username}`);
 }
