@@ -1,3 +1,4 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -31,13 +32,13 @@ export async function createExperienceAction(
   }
 
   try {
-    const aiResponse = await summarizeExperienceReport({
-      report: validatedFields.data.reportText,
-    });
+    // const aiResponse = await summarizeExperienceReport({
+    //   report: validatedFields.data.reportText,
+    // });
 
     const newExperience = {
       ...validatedFields.data,
-      summary: aiResponse.summary,
+      summary: validatedFields.data.reportText.substring(0, 100) + "...", // aiResponse.summary,
     };
 
     const created = createExperience(newExperience);
