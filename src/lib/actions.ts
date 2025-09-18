@@ -32,13 +32,9 @@ export async function createExperienceAction(
   }
 
   try {
-    // const aiResponse = await summarizeExperienceReport({
-    //   report: validatedFields.data.reportText,
-    // });
-
     const newExperience = {
       ...validatedFields.data,
-      summary: validatedFields.data.reportText.substring(0, 100) + "...", // aiResponse.summary,
+      summary: validatedFields.data.reportText.substring(0, 150) + "...",
     };
 
     const created = createExperience(newExperience);
