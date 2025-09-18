@@ -33,6 +33,7 @@ const prompt = ai.definePrompt({
 
 Experience Report:
 {{{report}}}`,
+  model: 'googleai/gemini-2.5-flash',
 });
 
 const summarizeExperienceReportFlow = ai.defineFlow(

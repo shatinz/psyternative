@@ -31,13 +31,13 @@ export async function createExperienceAction(
   }
 
   try {
-    const { summary } = await summarizeExperienceReport({
+    const aiResponse = await summarizeExperienceReport({
       report: validatedFields.data.reportText,
     });
 
     const newExperience = {
       ...validatedFields.data,
-      summary,
+      summary: aiResponse.summary,
     };
 
     const created = createExperience(newExperience);
