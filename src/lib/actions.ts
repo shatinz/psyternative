@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addComment, createExperience } from "./data";
-import { summarizeExperienceReport } from "@/ai/flows/summarize-experience-reports";
+import type { ExperienceReport } from "@/types";
 
 const experienceSchema = z.object({
   title: z.string().min(3, "عنوان باید حداقل ۳ حرف داشته باشد."),
@@ -16,9 +16,9 @@ const experienceSchema = z.object({
 });
 
 export async function createExperienceAction(
-  prevState: { errors: { _form: string[] } },
+  prevState: { errors: { _form?: string[] } },
   formData: FormData
-): Promise<{ errors: { _form: string[] } }> {
+): Promise<{ errors: { _form?: string[] } }> {
   const validatedFields = experienceSchema.safeParse({
     title: formData.get("title"),
     reportText: formData.get("reportText"),
@@ -34,37 +34,37 @@ export async function createExperienceAction(
     };
   }
 
+  let newExperience: ExperienceReport | null = null;
   try {
-    const summaryResult = await summarizeExperienceReport({ report: validatedFields.data.reportText });
+    const summary = validatedFields.data.reportText.substring(0, 100) + "...";
 
-    const newExperience = {
+    const experienceData = {
       ...validatedFields.data,
-      summary: summaryResult.summary,
+      summary: summary,
     };
 
-    const created = await createExperience(newExperience);
+    newExperience = await createExperience(experienceData);
 
-    if (!created?.id) {
+    if (!newExperience?.id) {
        return {
         errors: {
-          ...prevState.errors,
           _form: ["شیء تجربه ایجاد شد اما شناسه ای دریافت نکرد."],
         },
       };
     }
 
-    revalidatePath("/experiences");
-    revalidatePath("/");
-    redirect(`/experiences/${created.id}`);
   } catch (error) {
     console.error("An unexpected error occurred in createExperienceAction:", error);
     return {
       errors: {
-        ...prevState.errors,
         _form: ["خطایی در هنگام ایجاد تجربه رخ داد. لطفا دوباره تلاش کنید."],
       },
     };
   }
+  
+  revalidatePath("/experiences");
+  revalidatePath("/");
+  redirect(`/experiences/${newExperience.id}`);
 }
 
 const commentSchema = z.object({
@@ -73,7 +73,7 @@ const commentSchema = z.object({
 });
 
 export async function addCommentAction(
-  prevState: { errors: { _form: string[] } },
+  prevState: { errors: { _form?: string[] } },
   formData: FormData
 ) {
     const validatedFields = commentSchema.safeParse({
@@ -96,13 +96,12 @@ export async function addCommentAction(
         });
         revalidatePath(`/experiences/${validatedFields.data.experienceId}`);
         return {
-            errors: { _form: [] }
+            errors: { }
         }
     } catch (error) {
         console.error("Failed to add comment:", error);
         return {
             errors: {
-                ...prevState.errors,
                 _form: ['خطایی در هنگام ارسال نظر رخ داد. لطفا دوباره تلاش کنید.']
             }
         }
