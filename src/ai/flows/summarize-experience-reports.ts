@@ -17,7 +17,7 @@ const SummarizeExperienceReportInputSchema = z.object({
 export type SummarizeExperienceReportInput = z.infer<typeof SummarizeExperienceReportInputSchema>;
 
 const SummarizeExperienceReportOutputSchema = z.object({
-  summary: z.string().describe('A concise summary of the experience report.'),
+  summary: z.string().describe("A concise, TLDR-style summary of the experience report. It should capture the essence of the experience, key events, and the overall outcome."),
 });
 export type SummarizeExperienceReportOutput = z.infer<typeof SummarizeExperienceReportOutputSchema>;
 
@@ -29,7 +29,7 @@ const prompt = ai.definePrompt({
   name: 'summarizeExperienceReportPrompt',
   input: {schema: SummarizeExperienceReportInputSchema},
   output: {schema: SummarizeExperienceReportOutputSchema},
-  prompt: `Summarize the following experience report in a concise and informative way, suitable for a TLDR (Too Long; Didn't Read) summary. The summary should capture the essence of the experience, key events, and overall outcome. Keep the summary short and in Persian.
+  prompt: `Summarize the following experience report for a "Too Long; Didn't Read" (TLDR) section. The summary must be concise and capture the main points, key events, and the final outcome of the experience.
 
 Experience Report:
 {{{report}}}`,
