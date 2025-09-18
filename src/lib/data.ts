@@ -1,3 +1,4 @@
+
 import { db } from "@/lib/firebase";
 import type { ExperienceReport, Comment, ExperienceCategory, UserProfile } from "@/types";
 import {
@@ -14,6 +15,7 @@ import {
   Timestamp,
   writeBatch,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 
 // --- Data Transformation Functions ---
@@ -141,7 +143,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     const userRef = doc(db, "users", uid);
     const userSnap = await getDoc(userRef);
     if (userSnap.exists()) {
-        return userSnap.data() as UserProfile;
+        const userData = userSnap.data();
+        return {
+            ...userData,
+            uid: userSnap.id,
+        } as UserProfile;
     }
     return null;
 }
