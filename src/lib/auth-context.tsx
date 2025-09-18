@@ -6,6 +6,8 @@ import type { User } from "firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import { createUserProfile, getUserProfile } from "./data";
+import { getAuth } from "firebase-admin/auth";
+import { adminApp } from "./firebase-admin";
 
 interface AuthContextType {
   user: User | null;
@@ -32,23 +34,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (user) {
         setUser(user);
         const token = await user.getIdToken();
+        const tokenResult = await user.getIdTokenResult();
+        const claimsUsername = tokenResult.claims.username as string | undefined;
+
         setIdToken(token);
-
-        let userProfile = await getUserProfile(user.uid);
-        if (!userProfile) {
-          // If profile doesn't exist, create it (e.g., for Google Sign-In)
-          const newUsername = user.email?.split('@')[0] || `user_${Date.now()}`;
-          const profileData = {
-            email: user.email!,
-            username: newUsername,
-            displayName: user.displayName || newUsername,
-            createdAt: new Date(),
-          };
-          await createUserProfile(user.uid, profileData);
-          userProfile = { uid: user.uid, ...profileData };
+        
+        if (claimsUsername) {
+            setUsername(claimsUsername);
+        } else {
+            // This might be a new user, let's check their profile
+            let userProfile = await getUserProfile(user.uid);
+            if (userProfile) {
+                setUsername(userProfile.username);
+            } else {
+                // If profile doesn't exist (e.g., first Google Sign-In), create it.
+                const newUsername = user.email?.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user_${Date.now()}`;
+                const profileData = {
+                    email: user.email!,
+                    username: newUsername,
+                    displayName: user.displayName || newUsername,
+                    createdAt: new Date(),
+                };
+                await createUserProfile(user.uid, profileData);
+                // We can't set custom claims from the client, 
+                // so we just set the username locally for this session.
+                // The claim will be set on the next server-side action or re-login.
+                setUsername(newUsername);
+            }
         }
-        setUsername(userProfile.username);
-
       } else {
         setUser(null);
         setIdToken(null);

@@ -50,8 +50,7 @@ export async function createExperienceAction(
   }
 
   const authorId = decodedToken.uid;
-  const authorProfile = await getUserProfile(authorId);
-  const authorUsername = authorProfile?.username || 'unknown';
+  const authorUsername = decodedToken.username || 'unknown';
 
   if (!validatedFields.success) {
     return {
@@ -244,11 +243,17 @@ async function firebaseAuthAction(
 
 export async function signUpAction(prevState: any, formData: FormData) {
   const result = await firebaseAuthAction(formData, "signUp");
+  if (!result.errors._form) {
+    revalidatePath("/");
+  }
   return result;
 }
 
 export async function signInAction(prevState: any, formData: FormData) {
-  const result = await firebaseAuthAction(formData, "signIn");
+   const result = await firebaseAuthAction(formData, "signIn");
+   if (!result.errors._form) {
+    revalidatePath("/");
+  }
   return result;
 }
 
@@ -272,8 +277,7 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
     return { errors: { _form: ["Invalid authentication token."] } };
   }
   
-  const currentProfile = await getUserProfile(decodedToken.uid);
-  const currentUsername = currentProfile?.username;
+  const currentUsername = decodedToken.username;
 
   const validatedFields = profileSchema.safeParse({
     displayName: formData.get("displayName"),
