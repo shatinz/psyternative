@@ -28,30 +28,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("AuthProvider: useEffect initiated.");
+    console.log("[AUTH_PROVIDER] Mounting: Setting up onAuthStateChanged listener.");
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log("AuthProvider: onAuthStateChanged event fired.");
-      setLoading(true);
+      console.log(`[AUTH_PROVIDER] onAuthStateChanged Fired. User: ${firebaseUser?.uid || 'null'}`);
+      
       if (firebaseUser) {
-        console.log(`AuthProvider: User found with UID: ${firebaseUser.uid}. Fetching token and profile.`);
+        // User is signed in.
+        if (user?.uid === firebaseUser.uid) {
+            console.log(`[AUTH_PROVIDER] User is already set. Skipping profile logic. UID: ${firebaseUser.uid}`);
+            setLoading(false);
+            return;
+        }
+
+        console.log(`[AUTH_PROVIDER] New user detected. UID: ${firebaseUser.uid}. Starting profile check.`);
         const tokenResult = await firebaseUser.getIdTokenResult();
         
+        console.log(`[AUTH_PROVIDER] Attempting to get user profile for UID: ${firebaseUser.uid}`);
         let userProfile = await getUserProfile(firebaseUser.uid);
         
         if (!userProfile) {
-          console.log(`AuthProvider: No profile found for UID: ${firebaseUser.uid}. Creating new profile.`);
+          console.log(`[AUTH_PROVIDER] No profile found for UID: ${firebaseUser.uid}. Proceeding to create one.`);
           const baseUsername = firebaseUser.email?.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user_${Date.now()}`;
           let finalUsername = baseUsername;
 
+          console.log(`[AUTH_PROVIDER] Checking username uniqueness for: ${finalUsername}`);
           let isUnique = await isUsernameUnique(finalUsername);
           let attempts = 0;
           while(!isUnique && attempts < 5) {
-              console.log(`AuthProvider: Username ${finalUsername} is not unique. Trying again.`);
+              attempts++;
+              console.log(`[AUTH_PROVIDER] Username ${finalUsername} is not unique. Attempt #${attempts}.`);
               finalUsername = `${baseUsername}_${Math.random().toString(36).substring(2, 6)}`;
               isUnique = await isUsernameUnique(finalUsername);
-              attempts++;
           }
-          if (!isUnique) finalUsername = `user_${firebaseUser.uid.substring(0, 5)}`
+          if (!isUnique) {
+            finalUsername = `user_${firebaseUser.uid.substring(0, 5)}`;
+            console.log(`[AUTH_PROVIDER] Could not find unique username after 5 attempts. Defaulting to: ${finalUsername}`);
+          }
 
           const profileData = {
               email: firebaseUser.email!,
@@ -59,35 +71,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               displayName: firebaseUser.displayName || finalUsername,
           };
           
+          console.log(`[AUTH_PROVIDER] Calling createUserProfile for UID: ${firebaseUser.uid}`);
           await createUserProfile(firebaseUser.uid, profileData);
-          console.log("AuthProvider: New user profile created in DB:", profileData);
+          console.log("[AUTH_PROVIDER] New user profile created in DB:", profileData);
           
           setUsername(finalUsername);
-          userProfile = { uid: firebaseUser.uid, createdAt: new Date(), ...profileData };
         } else {
-            console.log(`AuthProvider: Profile found for user: ${userProfile.username}`);
+            console.log(`[AUTH_PROVIDER] Profile found for user: ${userProfile.username}`);
             setUsername(userProfile.username);
         }
 
-        console.log("AuthProvider: Setting user state.");
+        console.log("[AUTH_PROVIDER] Setting user state in context.");
         setUser(firebaseUser);
         setIdToken(tokenResult.token);
         
       } else {
-        console.log("AuthProvider: No user found. Clearing user state.");
+        // User is signed out.
+        console.log("[AUTH_PROVIDER] No user found (signed out). Clearing user state.");
         setUser(null);
         setIdToken(null);
         setUsername(null);
       }
-      console.log("AuthProvider: Setting loading to false.");
+      console.log("[AUTH_PROVIDER] All tasks finished. Setting loading to false.");
       setLoading(false);
     });
 
     return () => {
-        console.log("AuthProvider: useEffect cleanup. Unsubscribing from onAuthStateChanged.");
+        console.log("[AUTH_PROVIDER] Unmounting: Cleaning up onAuthStateChanged listener.");
         unsubscribe();
     }
-  }, []);
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, loading, idToken, username }}>

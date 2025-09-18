@@ -163,40 +163,36 @@ async function firebaseAuthAction(
   formData: FormData,
   action: "signUp" | "signIn"
 ): Promise<{ errors: any, ran: boolean, user?: UserCredential }> {
-  console.log(`ACTIONS: firebaseAuthAction called for '${action}'`);
+  console.log(`[ACTIONS] firebaseAuthAction START - Action: '${action}'`);
   const validatedFields = authSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
 
   if (!validatedFields.success) {
+    console.log(`[ACTIONS] firebaseAuthAction VALIDATION FAILED`);
     return { errors: validatedFields.error.flatten().fieldErrors, ran: true };
   }
 
   try {
     let userCredential: UserCredential;
+    const email = validatedFields.data.email;
+    const password = validatedFields.data.password;
+
     if (action === "signUp") {
-      console.log(`ACTIONS: Attempting to create user with email: ${validatedFields.data.email}`);
-      userCredential = await createUserWithEmailAndPassword(
-        auth,
-        validatedFields.data.email,
-        validatedFields.data.password
-      );
-      console.log(`ACTIONS: User created successfully. UID: ${userCredential.user.uid}`);
+      console.log(`[ACTIONS] Attempting to create user with email: ${email}`);
+      userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log(`[ACTIONS] User created successfully. UID: ${userCredential.user.uid}`);
     } else {
-      console.log(`ACTIONS: Attempting to sign in user with email: ${validatedFields.data.email}`);
-      userCredential = await signInWithEmailAndPassword(
-        auth,
-        validatedFields.data.email,
-        validatedFields.data.password
-      );
-      console.log(`ACTIONS: User signed in successfully. UID: ${userCredential.user.uid}`);
+      console.log(`[ACTIONS] Attempting to sign in user with email: ${email}`);
+      userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log(`[ACTIONS] User signed in successfully. UID: ${userCredential.user.uid}`);
     }
     
     return { errors: {}, ran: true, user: userCredential };
 
   } catch (error: any) {
-    console.error(`ACTIONS: Firebase ${action} error:`, error);
+    console.error(`[ACTIONS] Firebase ${action} ERROR:`, error);
     let errorMessage = "An unexpected error occurred. Please try again.";
     if (error.code) {
       switch (error.code) {
@@ -234,15 +230,14 @@ async function firebaseAuthAction(
 }
 
 export async function signUpAction(prevState: any, formData: FormData) {
+  // The AuthProvider now handles profile creation. This action only creates the auth user.
   const result = await firebaseAuthAction(formData, "signUp");
-  // Don't redirect here, let the AuthProvider handle the user state change
   return result;
 }
 
 export async function signInAction(prevState: any, formData: FormData) {
    const result = await firebaseAuthAction(formData, "signIn");
-   // Don't redirect here, let the AuthProvider handle the user state change
-  return result;
+   return result;
 }
 
 const profileSchema = z.object({

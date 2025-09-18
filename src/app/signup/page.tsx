@@ -28,12 +28,12 @@ function GoogleSignInButton() {
   const { toast } = useToast();
   const handleGoogleSignIn = async () => {
     try {
-      console.log("SIGNUP_PAGE: Attempting Google Sign-In.");
+      console.log("[SIGNUP_PAGE] Google Sign-In button clicked.");
       await signInWithPopup(auth, googleProvider);
-      console.log("SIGNUP_PAGE: Google Sign-In popup finished.");
-      // The redirect is handled by the useAuth hook
+      console.log("[SIGNUP_PAGE] Google Sign-In popup finished successfully.");
+      // The redirect is handled by the AuthProvider
     } catch (error: any) {
-       console.error("SIGNUP_PAGE: Google Sign-In error:", error);
+       console.error("[SIGNUP_PAGE] Google Sign-In ERROR:", error);
        let errorMessage = "An unexpected error occurred during Google sign-in.";
         if (error.code) {
             switch (error.code) {
@@ -56,7 +56,7 @@ function GoogleSignInButton() {
   };
 
   return <Button variant="outline" onClick={handleGoogleSignIn} className="w-full">
-    <svg className="ml-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-79.3 79.3C311.4 119.5 281.2 104 248 104c-73.8 0-134.2 59.8-134.2 133.4s60.4 133.4 134.2 133.4c52.3 0 92.5-23.4 110-44.9H248V261.8h232.2c5.9 32.7 8.9 66.8 8.9 101.2z"></path></svg>
+    <svg className="ml-2 h-4 w-4" aria-hidden="true" focusable="false" data-prefix="fab" data-icon="google" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 488 512"><path fill="currentColor" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 126 23.4 172.9 61.9l-79.3 79.3C311.4 119.5 281.2 104 248 104c-73.8 0-134.2 59.8-134.2 133.4s60.4 133.4 134.2 134.4c52.3 0 92.5-23.4 110-44.9H248V261.8h232.2c5.9 32.7 8.9 66.8 8.9 101.2z"></path></svg>
     ثبت نام با گوگل
     </Button>;
 }
@@ -67,11 +67,13 @@ export default function SignUpPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
+  
+  console.log(`[SIGNUP_PAGE] Rendering. Loading: ${loading}, User: ${user?.uid || 'null'}`);
 
   useEffect(() => {
     // This effect now only handles showing errors from the form submission
     if (state.ran && state.errors?._form) {
-      console.log("SIGNUP_PAGE: Form action completed with error:", state.errors._form[0]);
+      console.log("[SIGNUP_PAGE] Form action completed with error:", state.errors._form[0]);
       toast({
         title: "خطا در ثبت نام",
         description: state.errors._form[0],
@@ -83,13 +85,17 @@ export default function SignUpPage() {
   // The AuthProvider will handle redirecting the user if they are logged in.
   // We just show a loading state here.
   if (loading) {
+     console.log("[SIGNUP_PAGE] Auth is loading. Showing loading indicator.");
      return <div className="container text-center p-8">در حال بارگذاری...</div>;
   }
    if (user) {
+    console.log("[SIGNUP_PAGE] User is logged in. Redirecting to home page.");
+    router.push('/');
     return <div className="container text-center p-8">ثبت نام موفقیت آمیز بود. در حال انتقال...</div>;
   }
 
 
+  console.log("[SIGNUP_PAGE] User not logged in. Showing signup form.");
   return (
     <div className="container flex min-h-[80vh] items-center justify-center px-4 py-8">
       <Card className="w-full max-w-sm">

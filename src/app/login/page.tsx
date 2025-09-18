@@ -29,12 +29,12 @@ function GoogleSignInButton() {
   const { toast } = useToast();
   const handleGoogleSignIn = async () => {
     try {
-      console.log("LOGIN_PAGE: Attempting Google Sign-In.");
+      console.log("[LOGIN_PAGE] Google Sign-In button clicked.");
       await signInWithPopup(auth, googleProvider);
-      console.log("LOGIN_PAGE: Google Sign-In popup finished.");
-      // The redirect is handled by the useAuth hook
+      console.log("[LOGIN_PAGE] Google Sign-In popup finished successfully.");
+      // The redirect is handled by the AuthProvider
     } catch (error: any) {
-       console.error("LOGIN_PAGE: Google Sign-In error:", error);
+       console.error("[LOGIN_PAGE] Google Sign-In ERROR:", error);
        let errorMessage = "An unexpected error occurred during Google sign-in.";
         if (error.code) {
             switch (error.code) {
@@ -68,10 +68,12 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  console.log(`[LOGIN_PAGE] Rendering. Loading: ${loading}, User: ${user?.uid || 'null'}`);
+
   useEffect(() => {
     // This effect now only handles showing errors from the form submission
     if (state.ran && state.errors?._form) {
-      console.log("LOGIN_PAGE: Form action completed with error:", state.errors._form[0]);
+      console.log("[LOGIN_PAGE] Form action completed with error:", state.errors._form[0]);
       toast({
         title: "خطا در ورود",
         description: state.errors._form[0],
@@ -83,13 +85,17 @@ export default function LoginPage() {
   // The AuthProvider will handle redirecting the user if they are logged in.
   // We just show a loading state here.
   if (loading) {
+    console.log("[LOGIN_PAGE] Auth is loading. Showing loading indicator.");
     return <div className="container text-center p-8">در حال بارگذاری...</div>;
   }
   
   if (user) {
+    console.log("[LOGIN_PAGE] User is logged in. Redirecting to home page.");
+    router.push('/');
     return <div className="container text-center p-8">ورود موفقیت آمیز بود. در حال انتقال...</div>;
   }
 
+  console.log("[LOGIN_PAGE] User not logged in. Showing login form.");
   return (
     <div className="container flex min-h-[80vh] items-center justify-center px-4 py-8">
       <Card className="w-full max-w-sm">

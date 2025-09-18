@@ -158,62 +158,74 @@ export async function addComment(experienceId: string, data: { text: string; aut
 // --- User Profile Functions ---
 
 export async function createUserProfile(uid: string, data: Omit<UserProfile, 'uid' | 'createdAt'>) {
-    console.log(`DATA: createUserProfile called for UID: ${uid}`);
+    console.log(`[DATA] createUserProfile START - UID: ${uid}`);
     const userRef = doc(db, "users", uid);
     const profileData = {
         ...data,
         uid,
         createdAt: serverTimestamp()
     };
-    const result = await setDoc(userRef, profileData, { merge: true });
-    console.log(`DATA: createUserProfile finished for UID: ${uid}`);
-    return result;
+    await setDoc(userRef, profileData, { merge: true });
+    console.log(`[DATA] createUserProfile END - UID: ${uid}`);
 }
 
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-    console.log(`DATA: getUserProfile called for UID: ${uid}`);
+    console.log(`[DATA] getUserProfile START - UID: ${uid}`);
     const userRef = doc(db, "users", uid);
-    const userSnap = await getDoc(userRef);
-    if (userSnap.exists()) {
-        const userData = userSnap.data();
-        console.log(`DATA: getUserProfile found user:`, userData.username);
-        return {
-            uid: userSnap.id,
-            username: userData.username,
-            displayName: userData.displayName,
-            email: userData.email,
-            createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
-        };
+    try {
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            console.log(`[DATA] getUserProfile SUCCESS - Found user: ${userData.username}`);
+            return {
+                uid: userSnap.id,
+                username: userData.username,
+                displayName: userData.displayName,
+                email: userData.email,
+                createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
+            };
+        } else {
+            console.log(`[DATA] getUserProfile SUCCESS - No profile document found for UID: ${uid}`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`[DATA] getUserProfile ERROR - Failed to fetch profile for UID: ${uid}`, error);
+        return null; // Return null on error to prevent crashes
     }
-    console.log(`DATA: getUserProfile did NOT find user for UID: ${uid}`);
-    return null;
 }
 
 export async function getUserByUsername(username: string): Promise<UserProfile | null> {
-    console.log(`DATA: getUserByUsername called for username: ${username}`);
+    console.log(`[DATA] getUserByUsername START - Username: ${username}`);
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("username", "==", username));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data();
-        console.log(`DATA: getUserByUsername found user for username: ${username}`);
-        return { 
-            uid: userDoc.id, 
-            ...userData,
-            createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
-        } as UserProfile;
+    try {
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const userDoc = querySnapshot.docs[0];
+            const userData = userDoc.data();
+            console.log(`[DATA] getUserByUsername SUCCESS - Found user for username: ${username}`);
+            return { 
+                uid: userDoc.id, 
+                ...userData,
+                createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
+            } as UserProfile;
+        } else {
+            console.log(`[DATA] getUserByUsername SUCCESS - No user found for username: ${username}`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`[DATA] getUserByUsername ERROR - Failed to query for username: ${username}`, error);
+        return null;
     }
-    console.log(`DATA: getUserByUsername did NOT find user for username: ${username}`);
-    return null;
 }
 
 export async function isUsernameUnique(username: string): Promise<boolean> {
-    console.log(`DATA: isUsernameUnique checking for: ${username}`);
+    console.log(`[DATA] isUsernameUnique START - Checking for: ${username}`);
     const user = await getUserByUsername(username);
-    console.log(`DATA: isUsernameUnique result for ${username}: ${user === null}`);
-    return user === null;
+    const isUnique = user === null;
+    console.log(`[DATA] isUsernameUnique END - Result for ${username}: ${isUnique}`);
+    return isUnique;
 }
 
 // --- Helper Functions ---
