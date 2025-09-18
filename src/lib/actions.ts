@@ -163,7 +163,7 @@ async function firebaseAuthAction(
   formData: FormData,
   action: "signUp" | "signIn"
 ): Promise<{ errors: any, ran: boolean, user?: UserCredential }> {
-  console.log(`[ACTIONS] firebaseAuthAction START - Action: '${action}'`);
+  console.log(`[ACTIONS] firebaseAuthAction called for '${action}'`);
   const validatedFields = authSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -230,13 +230,17 @@ async function firebaseAuthAction(
 }
 
 export async function signUpAction(prevState: any, formData: FormData) {
+  console.log("[ACTIONS] signUpAction called");
   // The AuthProvider now handles profile creation. This action only creates the auth user.
   const result = await firebaseAuthAction(formData, "signUp");
+  console.log("[ACTIONS] signUpAction finished");
   return result;
 }
 
 export async function signInAction(prevState: any, formData: FormData) {
+   console.log("[ACTIONS] signInAction called");
    const result = await firebaseAuthAction(formData, "signIn");
+   console.log("[ACTIONS] signInAction finished");
    return result;
 }
 

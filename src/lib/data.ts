@@ -172,6 +172,10 @@ export async function createUserProfile(uid: string, data: Omit<UserProfile, 'ui
 
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
     console.log(`[DATA] getUserProfile START - UID: ${uid}`);
+    if (!uid) {
+        console.error("[DATA] getUserProfile ERROR - received null or undefined UID.");
+        return null;
+    }
     const userRef = doc(db, "users", uid);
     try {
         const userSnap = await getDoc(userRef);
@@ -243,6 +247,7 @@ async function getAuthorUsernames(authorIds: string[]): Promise<Map<string, stri
   }
 
   for (const batch of idBatches) {
+    if (batch.length === 0) continue;
     const usersQuery = query(collection(db, "users"), where("uid", "in", batch));
     const usersSnapshot = await getDocs(usersQuery);
     usersSnapshot.forEach(doc => {

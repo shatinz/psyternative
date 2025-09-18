@@ -28,20 +28,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("[AUTH_PROVIDER] Mounting: Setting up onAuthStateChanged listener.");
+    console.log("[AUTH_PROVIDER] Setting up onAuthStateChanged listener.");
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      console.log(`[AUTH_PROVIDER] onAuthStateChanged Fired. User: ${firebaseUser?.uid || 'null'}`);
+      console.log(`[AUTH_PROVIDER] onAuthStateChanged fired. User UID: ${firebaseUser?.uid || 'null'}`);
       
       if (firebaseUser) {
         // User is signed in.
-        if (user?.uid === firebaseUser.uid) {
-            console.log(`[AUTH_PROVIDER] User is already set. Skipping profile logic. UID: ${firebaseUser.uid}`);
+        if (user?.uid === firebaseUser.uid && username) {
+            console.log(`[AUTH_PROVIDER] User is already set and has a username. UID: ${firebaseUser.uid}, Username: ${username}. Skipping further processing.`);
             setLoading(false);
             return;
         }
 
-        console.log(`[AUTH_PROVIDER] New user detected. UID: ${firebaseUser.uid}. Starting profile check.`);
-        const tokenResult = await firebaseUser.getIdTokenResult();
+        console.log(`[AUTH_PROVIDER] New user or missing username. UID: ${firebaseUser.uid}. Starting profile check.`);
         
         console.log(`[AUTH_PROVIDER] Attempting to get user profile for UID: ${firebaseUser.uid}`);
         let userProfile = await getUserProfile(firebaseUser.uid);
@@ -51,7 +50,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           const baseUsername = firebaseUser.email?.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || `user_${Date.now()}`;
           let finalUsername = baseUsername;
 
-          console.log(`[AUTH_PROVIDER] Checking username uniqueness for: ${finalUsername}`);
+          console.log(`[AUTH_PROVIDER] Checking username uniqueness for base: ${finalUsername}`);
           let isUnique = await isUsernameUnique(finalUsername);
           let attempts = 0;
           while(!isUnique && attempts < 5) {
@@ -71,19 +70,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               displayName: firebaseUser.displayName || finalUsername,
           };
           
-          console.log(`[AUTH_PROVIDER] Calling createUserProfile for UID: ${firebaseUser.uid}`);
+          console.log(`[AUTH_PROVIDER] Calling createUserProfile for UID: ${firebaseUser.uid} with data:`, profileData);
           await createUserProfile(firebaseUser.uid, profileData);
-          console.log("[AUTH_PROVIDER] New user profile created in DB:", profileData);
+          console.log("[AUTH_PROVIDER] New user profile created in DB.");
           
-          setUsername(finalUsername);
+          userProfile = await getUserProfile(firebaseUser.uid);
         } else {
             console.log(`[AUTH_PROVIDER] Profile found for user: ${userProfile.username}`);
-            setUsername(userProfile.username);
         }
+        
+        console.log(`[AUTH_PROVIDER] Fetching ID token for user: ${firebaseUser.uid}`);
+        const tokenResult = await firebaseUser.getIdTokenResult();
 
         console.log("[AUTH_PROVIDER] Setting user state in context.");
         setUser(firebaseUser);
         setIdToken(tokenResult.token);
+        if (userProfile?.username) {
+            console.log(`[AUTH_PROVIDER] Setting username in context: ${userProfile.username}`);
+            setUsername(userProfile.username);
+        } else {
+            console.warn("[AUTH_PROVIDER] Profile exists but username is missing.");
+            setUsername(null);
+        }
         
       } else {
         // User is signed out.
@@ -92,7 +100,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setIdToken(null);
         setUsername(null);
       }
-      console.log("[AUTH_PROVIDER] All tasks finished. Setting loading to false.");
+      console.log("[AUTH_PROVIDER] All tasks finished for this onAuthStateChanged event. Setting loading to false.");
       setLoading(false);
     });
 
@@ -100,7 +108,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log("[AUTH_PROVIDER] Unmounting: Cleaning up onAuthStateChanged listener.");
         unsubscribe();
     }
-  }, [user]);
+  }, []); // Empty dependency array to ensure this runs only once on mount
 
   return (
     <AuthContext.Provider value={{ user, loading, idToken, username }}>
