@@ -13,29 +13,26 @@ import {
   updateDoc,
   arrayUnion,
   Timestamp,
-  writeBatch,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
 
+
 // --- Data Transformation Functions ---
 
-async function experienceFromDoc(doc: any, allUsers: Map<string, UserProfile>): Promise<ExperienceReport> {
-  const data = doc.data();
-  
-  const authorUsername = allUsers.get(data.authorId)?.username || "Anonymous";
+function transformDocToExperience(docSnap: any, authorUsernames: Map<string, string>): ExperienceReport {
+  const data = docSnap.data();
+  const authorId = data.authorId;
+  const authorUsername = authorUsernames.get(authorId) || 'Anonymous';
 
-  const comments = (data.comments || []).map((comment: any) => {
-      const commentAuthorUsername = allUsers.get(comment.authorId)?.username || "Anonymous";
-      return {
-          ...comment,
-          author: commentAuthorUsername,
-          createdAt: (comment.createdAt as Timestamp).toDate(),
-      }
-  }).sort((a: Comment, b: Comment) => b.createdAt.getTime() - a.createdAt.getTime());
+  const comments = (data.comments || []).map((comment: any) => ({
+      ...comment,
+      author: authorUsernames.get(comment.authorId) || 'Anonymous',
+      createdAt: (comment.createdAt as Timestamp).toDate(),
+  })).sort((a: Comment, b: Comment) => b.createdAt.getTime() - a.createdAt.getTime());
 
   return {
-    id: doc.id,
+    id: docSnap.id,
     ...data,
     author: authorUsername,
     createdAt: (data.createdAt as Timestamp).toDate(),
@@ -70,29 +67,9 @@ export async function getExperiences(qs?: string, category?: ExperienceCategory)
       }
   });
 
-  // Fetch all required user profiles in a single query if there are any
-  const allUsers = new Map<string, UserProfile>();
-  const idsToFetch = Array.from(authorIds);
+  const authorUsernames = await getAuthorUsernames(Array.from(authorIds));
 
-  if (idsToFetch.length > 0) {
-      // Firestore 'in' queries are limited to 30 elements.
-      // We need to batch the requests if there are more than 30 authors.
-      const userBatches: Promise<any>[] = [];
-      for (let i = 0; i < idsToFetch.length; i += 30) {
-          const batch = idsToFetch.slice(i, i + 30);
-          userBatches.push(getDocs(query(collection(db, "users"), where("uid", "in", batch))));
-      }
-      
-      const userSnapshots = await Promise.all(userBatches);
-      userSnapshots.forEach(userSnapshot => {
-          userSnapshot.forEach((userDoc: any) => {
-              const userData = userDoc.data() as UserProfile;
-              allUsers.set(userData.uid, userData);
-          });
-      });
-  }
-
-  const experienceList = await Promise.all(experienceSnapshot.docs.map(doc => experienceFromDoc(doc, allUsers)));
+  const experienceList = experienceSnapshot.docs.map(doc => transformDocToExperience(doc, authorUsernames));
 
   if (qs) {
     const lowercasedQuery = qs.toLowerCase();
@@ -111,8 +88,6 @@ export async function getExperienceById(id: string): Promise<ExperienceReport | 
   const experienceDoc = await getDoc(experienceDocRef);
 
   if (experienceDoc.exists()) {
-    // This function can be simpler and also leverage the batched approach if it becomes a bottleneck.
-    // For a single document, fetching authors one by one is acceptable.
     const data = experienceDoc.data();
     const authorIds = new Set<string>();
     if (data.authorId) authorIds.add(data.authorId);
@@ -122,27 +97,8 @@ export async function getExperienceById(id: string): Promise<ExperienceReport | 
         });
     }
 
-    const allUsers = new Map<string, UserProfile>();
-    const idsToFetch = Array.from(authorIds);
-     if (idsToFetch.length > 0) {
-      // Firestore 'in' queries are limited to 30 elements.
-      // We need to batch the requests if there are more than 30 authors.
-      const userBatches: Promise<any>[] = [];
-      for (let i = 0; i < idsToFetch.length; i += 30) {
-          const batch = idsToFetch.slice(i, i + 30);
-          userBatches.push(getDocs(query(collection(db, "users"), where("uid", "in", batch))));
-      }
-      
-      const userSnapshots = await Promise.all(userBatches);
-      userSnapshots.forEach(userSnapshot => {
-          userSnapshot.forEach((userDoc: any) => {
-              const userData = userDoc.data() as UserProfile;
-              allUsers.set(userData.uid, userData);
-          });
-      });
-  }
-
-    return experienceFromDoc(experienceDoc, allUsers);
+    const authorUsernames = await getAuthorUsernames(Array.from(authorIds));
+    return transformDocToExperience(experienceDoc, authorUsernames);
   } else {
     return undefined;
   }
@@ -208,7 +164,7 @@ export async function createUserProfile(uid: string, data: Omit<UserProfile, 'ui
         uid,
         createdAt: data.createdAt ? Timestamp.fromDate(data.createdAt) : serverTimestamp()
     };
-    return setDoc(userRef, profileData);
+    return setDoc(userRef, profileData, { merge: true }); // Use merge to avoid overwriting
 }
 
 
@@ -244,23 +200,33 @@ export async function getUserByUsername(username: string): Promise<UserProfile |
     return null;
 }
 
-export async function getUserByEmail(email: string): Promise<UserProfile | null> {
-    const usersRef = collection(db, "users");
-    const q = query(usersRef, where("email", "==", email));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data();
-        return { 
-            uid: userDoc.id, 
-            ...userData,
-            createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
-        } as UserProfile;
-    }
-    return null;
-}
-
 export async function isUsernameUnique(username: string): Promise<boolean> {
     const user = await getUserByUsername(username);
     return user === null;
+}
+
+// --- Helper Functions ---
+async function getAuthorUsernames(authorIds: string[]): Promise<Map<string, string>> {
+  const usernames = new Map<string, string>();
+  if (authorIds.length === 0) {
+    return usernames;
+  }
+
+  // Firestore 'in' query limitation is 30. We need to batch requests.
+  const idBatches: string[][] = [];
+  for (let i = 0; i < authorIds.length; i += 30) {
+      const batch = authorIds.slice(i, i + 30);
+      idBatches.push(batch);
+  }
+
+  for (const batch of idBatches) {
+    const usersQuery = query(collection(db, "users"), where("uid", "in", batch));
+    const usersSnapshot = await getDocs(usersQuery);
+    usersSnapshot.forEach(doc => {
+      const userData = doc.data();
+      usernames.set(userData.uid, userData.username || 'Anonymous');
+    });
+  }
+  
+  return usernames;
 }

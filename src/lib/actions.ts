@@ -4,9 +4,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { addComment, createExperience, createUserProfile, isUsernameUnique, getUserProfile, getExperiences } from "./data";
+import { addComment, createExperience, createUserProfile, isUsernameUnique } from "./data";
 import type { ExperienceReport } from "@/types";
-import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "./firebase";
 import { getAuth } from "firebase-admin/auth";
 import { adminApp } from "./firebase-admin";
@@ -43,6 +43,8 @@ export async function createExperienceAction(
   }
 
   let decodedToken;
+  let newExperience: ExperienceReport | null = null;
+
   try {
     decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
   } catch (error) {
@@ -59,7 +61,6 @@ export async function createExperienceAction(
     };
   }
 
-  let newExperience: ExperienceReport | null = null;
   try {
     const summary = validatedFields.data.reportText.substring(0, 100) + "...";
 
@@ -179,20 +180,8 @@ async function firebaseAuthAction(
         validatedFields.data.email,
         validatedFields.data.password
       );
-      
-      const username = validatedFields.data.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
-      const isUnique = await isUsernameUnique(username);
-      const finalUsername = isUnique ? username : `${username}-${Date.now()}`;
-
-      await createUserProfile(userCredential.user.uid, {
-        email: validatedFields.data.email,
-        username: finalUsername,
-        displayName: finalUsername,
-        createdAt: new Date(),
-      });
-      
-      await getAuth(adminApp).setCustomUserClaims(userCredential.user.uid, { username: finalUsername });
-
+      // The creation of the user profile document is now handled by the AuthProvider
+      // to ensure it happens reliably for all sign-up methods.
     } else {
       userCredential = await signInWithEmailAndPassword(
         auth,
@@ -299,10 +288,12 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
   }
 
   try {
+    // We need to update both Firestore and the user's custom claims
     await adminApp.firestore().collection("users").doc(uid).update({
       displayName,
       username,
     });
+    // Setting custom claims will force the user's ID token to refresh on the client
     await getAuth(adminApp).setCustomUserClaims(uid, { username: username });
 
   } catch (error) {
@@ -310,6 +301,7 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
     return { errors: { _form: ["Failed to update profile."] } };
   }
   
+  // Revalidate the old path, then redirect to the new one
   if (currentUsername) revalidatePath(`/profile/${currentUsername}`);
   revalidatePath(`/profile/${username}`);
   redirect(`/profile/${username}`);
