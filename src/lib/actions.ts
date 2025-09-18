@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addComment, createExperience } from "./data";
+import { summarizeExperienceReport } from "@/ai/flows/summarize-experience-reports";
 
 const experienceSchema = z.object({
   title: z.string().min(3, "عنوان باید حداقل ۳ حرف داشته باشد."),
@@ -15,9 +16,9 @@ const experienceSchema = z.object({
 });
 
 export async function createExperienceAction(
-  prevState: any,
+  prevState: { errors: { _form: string[] } },
   formData: FormData
-) {
+): Promise<{ errors: { _form: string[] } }> {
   const validatedFields = experienceSchema.safeParse({
     title: formData.get("title"),
     reportText: formData.get("reportText"),
@@ -27,25 +28,27 @@ export async function createExperienceAction(
   if (!validatedFields.success) {
     return {
       errors: {
+        ...prevState.errors,
         ...validatedFields.error.flatten().fieldErrors,
-        _form: [],
       }
     };
   }
 
   try {
-    // AI summary is disabled for now
+    const summaryResult = await summarizeExperienceReport({ report: validatedFields.data.reportText });
+
     const newExperience = {
       ...validatedFields.data,
-      summary: validatedFields.data.reportText.substring(0, 100) + "...",
+      summary: summaryResult.summary,
     };
 
-    const created = createExperience(newExperience);
+    const created = await createExperience(newExperience);
 
     if (!created?.id) {
        return {
         errors: {
-          _form: ["خطایی در هنگام ایجاد شناسه تجربه رخ داد. لطفا دوباره تلاش کنید."],
+          ...prevState.errors,
+          _form: ["شیء تجربه ایجاد شد اما شناسه ای دریافت نکرد."],
         },
       };
     }
@@ -54,10 +57,10 @@ export async function createExperienceAction(
     revalidatePath("/");
     redirect(`/experiences/${created.id}`);
   } catch (error) {
-    console.error("An unexpected error occurred in createExperienceAction:");
-    console.error(error);
+    console.error("An unexpected error occurred in createExperienceAction:", error);
     return {
       errors: {
+        ...prevState.errors,
         _form: ["خطایی در هنگام ایجاد تجربه رخ داد. لطفا دوباره تلاش کنید."],
       },
     };
@@ -70,7 +73,7 @@ const commentSchema = z.object({
 });
 
 export async function addCommentAction(
-  prevState: any,
+  prevState: { errors: { _form: string[] } },
   formData: FormData
 ) {
     const validatedFields = commentSchema.safeParse({
@@ -81,14 +84,14 @@ export async function addCommentAction(
     if(!validatedFields.success) {
         return {
             errors: {
+              ...prevState.errors,
               ...validatedFields.error.flatten().fieldErrors,
-              _form: [],
             }
         }
     }
 
     try {
-        addComment(validatedFields.data.experienceId, {
+        await addComment(validatedFields.data.experienceId, {
             text: validatedFields.data.text,
         });
         revalidatePath(`/experiences/${validatedFields.data.experienceId}`);
@@ -99,6 +102,7 @@ export async function addCommentAction(
         console.error("Failed to add comment:", error);
         return {
             errors: {
+                ...prevState.errors,
                 _form: ['خطایی در هنگام ارسال نظر رخ داد. لطفا دوباره تلاش کنید.']
             }
         }

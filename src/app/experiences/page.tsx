@@ -2,7 +2,7 @@ import ExperienceCard from "@/components/experiences/experience-card";
 import { getExperiences } from "@/lib/data";
 import type { ExperienceCategory } from "@/types";
 
-export default function ExperiencesPage({
+export default async function ExperiencesPage({
   searchParams,
 }: {
   searchParams?: {
@@ -10,7 +10,7 @@ export default function ExperiencesPage({
   };
 }) {
   const category = searchParams?.category;
-  const experiences = getExperiences(undefined, category);
+  const experiences = await getExperiences(undefined, category);
 
   const categoryTranslations: Record<string, string> = {
     psychedelics: "روان‌گردان‌ها",

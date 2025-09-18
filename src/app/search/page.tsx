@@ -1,7 +1,7 @@
 import ExperienceCard from "@/components/experiences/experience-card";
 import { getExperiences } from "@/lib/data";
 
-export default function SearchPage({
+export default async function SearchPage({
   searchParams,
 }: {
   searchParams?: {
@@ -9,7 +9,7 @@ export default function SearchPage({
   };
 }) {
   const query = searchParams?.q || "";
-  const results = getExperiences(query);
+  const results = await getExperiences(query);
 
   return (
     <div className="container mx-auto px-4 py-8">

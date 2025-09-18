@@ -4,12 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { getExperienceById } from "@/lib/data";
 import { notFound } from "next/navigation";
 
-export default function ExperienceDetailPage({
+export default async function ExperienceDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const experience = getExperienceById(params.id);
+  const experience = await getExperienceById(params.id);
 
   if (!experience) {
     notFound();
