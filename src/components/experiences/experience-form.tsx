@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 import { createExperienceAction } from "@/lib/actions";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../ui/card";
 import { Label } from "../ui/label";
@@ -9,7 +9,7 @@ import { Textarea } from "../ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Button } from "../ui/button";
 import { Alert, AlertDescription } from "../ui/alert";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useActionState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 function SubmitButton() {
@@ -22,7 +22,7 @@ function SubmitButton() {
 }
 
 export default function ExperienceForm() {
-  const [state, formAction] = useFormState(createExperienceAction, { errors: {} });
+  const [state, formAction] = useActionState(createExperienceAction, { errors: {} });
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
 

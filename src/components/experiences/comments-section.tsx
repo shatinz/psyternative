@@ -3,12 +3,12 @@
 import type { Comment } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Avatar, AvatarFallback } from "../ui/avatar";
-import { useFormState, useFormStatus } from "react-dom";
+import { useFormStatus } from "react-dom";
 import { addCommentAction } from "@/lib/actions";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useActionState } from "react";
 
 interface CommentsSectionProps {
   experienceId: string;
@@ -25,7 +25,7 @@ function SubmitButton() {
 }
 
 export default function CommentsSection({ experienceId, comments }: CommentsSectionProps) {
-  const [state, formAction] = useFormState(addCommentAction, { errors: {} });
+  const [state, formAction] = useActionState(addCommentAction, { errors: {} });
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
