@@ -1,3 +1,29 @@
+
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-landing",
+      "description": "Abstract, colorful representation of consciousness.",
+      "imageUrl": "https://picsum.photos/seed/roya1/1200/600",
+      "imageHint": "abstract consciousness"
+    },
+    {
+      "id": "psychedelics-landing",
+      "description": "Vibrant, psychedelic patterns and colors.",
+      "imageUrl": "https://picsum.photos/seed/roya2/600/400",
+      "imageHint": "psychedelic art"
+    },
+    {
+      "id": "dreams-landing",
+      "description": "Surreal, dream-like landscape with clouds and stars.",
+      "imageUrl": "https://picsum.photos/seed/roya3/600/400",
+      "imageHint": "dream landscape"
+    },
+    {
+      "id": "meditation-landing",
+      "description": "A person meditating in a serene, natural environment.",
+      "imageUrl": "https://picsum.photos/seed/roya4/600/400",
+      "imageHint": "serene meditation"
+    }
+  ]
 }
