@@ -99,11 +99,13 @@ export async function createExperience(data: { title: string; reportText: string
   const docRef = await addDoc(collection(db, "experiences"), newExperienceData);
   const createdDoc = await getDoc(docRef);
 
+  const authorProfile = await getUserProfile(data.authorId);
+
   return {
     id: docRef.id,
     ...newExperienceData,
     createdAt: (createdDoc.data()?.createdAt as Timestamp).toDate(),
-    author: '', // Author will be populated by experienceFromDoc
+    author: authorProfile?.username ?? 'Anonymous',
     comments: []
   };
 }
@@ -123,11 +125,13 @@ export async function addComment(experienceId: string, data: { text: string; aut
     await updateDoc(experienceRef, {
         comments: arrayUnion(newComment)
     });
+    
+    const authorProfile = await getUserProfile(data.authorId);
 
     return {
         ...newComment,
         createdAt: new Date(),
-        author: '', // Will be populated by experienceFromDoc
+        author: authorProfile?.username ?? 'Anonymous',
     };
 }
 
@@ -147,6 +151,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
         return {
             ...userData,
             uid: userSnap.id,
+            createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
         } as UserProfile;
     }
     return null;
@@ -158,7 +163,12 @@ export async function getUserByUsername(username: string): Promise<UserProfile |
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
-        return { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+        const userData = userDoc.data();
+        return { 
+            uid: userDoc.id, 
+            ...userData,
+            createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
+        } as UserProfile;
     }
     return null;
 }
@@ -169,7 +179,12 @@ export async function getUserByEmail(email: string): Promise<UserProfile | null>
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
         const userDoc = querySnapshot.docs[0];
-        return { uid: userDoc.id, ...userDoc.data() } as UserProfile;
+        const userData = userDoc.data();
+        return { 
+            uid: userDoc.id, 
+            ...userData,
+            createdAt: (userData.createdAt as Timestamp)?.toDate() || new Date(),
+        } as UserProfile;
     }
     return null;
 }
