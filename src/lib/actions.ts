@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { addComment, createExperience, createUserProfile, getUserByEmail, isUsernameUnique } from "./data";
+import { addComment, createExperience, createUserProfile, isUsernameUnique, getUserByUsername } from "./data";
 import type { ExperienceReport } from "@/types";
 import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { auth } from "./firebase";
@@ -49,6 +49,7 @@ export async function createExperienceAction(
   }
 
   const authorId = decodedToken.uid;
+  const authorUsername = (await getUserByUsername(decodedToken.uid))?.username || 'unknown';
 
   if (!validatedFields.success) {
     return {
@@ -90,7 +91,7 @@ export async function createExperienceAction(
   
   revalidatePath("/experiences");
   revalidatePath("/");
-  revalidatePath(`/profile/${decodedToken.username}`);
+  if(authorUsername) revalidatePath(`/profile/${authorUsername}`);
   redirect(`/experiences/${newExperience.id}`);
 }
 
@@ -178,7 +179,7 @@ async function firebaseAuthAction(
         validatedFields.data.password
       );
       
-      const username = validatedFields.data.email.split('@')[0];
+      const username = validatedFields.data.email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '');
       const isUnique = await isUsernameUnique(username);
       const finalUsername = isUnique ? username : `${username}-${Date.now()}`;
 
@@ -188,10 +189,8 @@ async function firebaseAuthAction(
         displayName: finalUsername,
         createdAt: new Date(),
       });
-
-      await updateProfile(userCredential.user, {
-        displayName: finalUsername,
-      });
+      
+      await getAuth(adminApp).setCustomUserClaims(userCredential.user.uid, { username: finalUsername });
 
     } else {
       userCredential = await signInWithEmailAndPassword(
@@ -260,12 +259,18 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
   const idToken = formData.get("idToken") as string;
   if (!idToken) return { errors: { _form: ["Authentication required."] } };
 
+  if (!adminApp) {
+    return { errors: { _form: ["Firebase Admin SDK not initialized."] } };
+  }
+
   let decodedToken;
   try {
     decodedToken = await getAuth(adminApp).verifyIdToken(idToken);
   } catch (error) {
     return { errors: { _form: ["Invalid authentication token."] } };
   }
+  
+  const currentUsername = (await getUserProfile(decodedToken.uid))?.username;
 
   const validatedFields = profileSchema.safeParse({
     displayName: formData.get("displayName"),
@@ -279,7 +284,7 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
   const { displayName, username } = validatedFields.data;
   const uid = decodedToken.uid;
 
-  if (username !== decodedToken.username) {
+  if (username !== currentUsername) {
     const isUnique = await isUsernameUnique(username);
     if (!isUnique) {
       return { errors: { username: ["This username is already taken."] } };
@@ -291,9 +296,11 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
       displayName,
       username,
     });
-    await getAuth(adminApp).updateUser(uid, { displayName: username });
+    await getAuth(adminApp).setCustomUserClaims(uid, { username: username });
+
      revalidatePath(`/profile/${username}`);
-     return { success: true, errors: {} };
+     if(currentUsername) revalidatePath(`/profile/${currentUsername}`);
+     return { success: true, errors: {}, newUsername: username };
   } catch (error) {
     console.error("Error updating profile:", error);
     return { errors: { _form: ["Failed to update profile."] } };

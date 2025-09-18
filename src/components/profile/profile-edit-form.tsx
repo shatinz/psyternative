@@ -12,28 +12,34 @@ import { Button } from "../ui/button";
 import { useFormStatus } from "react-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Edit } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 function SubmitButton() {
     const { pending } = useFormStatus();
-    return <Button type="submit" disabled={pending}>{pending ? "Saving..." : "Save Changes"}</Button>
+    return <Button type="submit" disabled={pending}>{pending ? "در حال ذخیره..." : "ذخیره تغییرات"}</Button>
 }
 
 export default function ProfileEditForm({ userProfile }: { userProfile: UserProfile }) {
   const { user, idToken } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   const [state, formAction] = useActionState(updateProfileAction, { errors: {} });
 
   useEffect(() => {
     if (state?.success) {
-      toast({ title: "Profile updated successfully!" });
+      toast({ title: "پروفایل با موفقیت بروزرسانی شد!" });
       setIsEditing(false);
+      // We need to refresh the page to see the changes, or redirect.
+      // Redirecting to the new username URL if it changed.
+      router.push(`/profile/${state.newUsername || userProfile.username}`);
+      router.refresh();
     }
     if (state?.errors?._form) {
-      toast({ title: "Error", description: state.errors._form[0], variant: "destructive" });
+      toast({ title: "خطا", description: state.errors._form[0], variant: "destructive" });
     }
-  }, [state, toast]);
+  }, [state, toast, router, userProfile.username]);
 
   if (user?.uid !== userProfile.uid) {
     return null; // Don't show edit form if not the owner
@@ -42,34 +48,35 @@ export default function ProfileEditForm({ userProfile }: { userProfile: UserProf
   if (!isEditing) {
     return (
         <div className="flex justify-start">
-            <Button variant="outline" onClick={() => setIsEditing(true)}><Edit className="mr-2" /> ویرایش پروفایل</Button>
+            <Button variant="outline" onClick={() => setIsEditing(true)}><Edit className="ml-2 h-4 w-4" /> ویرایش پروفایل</Button>
         </div>
     )
   }
 
   return (
-    <Card className="mt-4">
+    <Card className="mt-4 border-primary">
         <CardHeader>
-            <CardTitle>Edit Your Profile</CardTitle>
-            <CardDescription>Update your display name and username.</CardDescription>
+            <CardTitle>ویرایش پروفایل</CardTitle>
+            <CardDescription>نام نمایشی و نام کاربری خود را بروزرسانی کنید.</CardDescription>
         </CardHeader>
         <form action={formAction}>
             <input type="hidden" name="idToken" value={idToken ?? ""} />
             <CardContent className="space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="displayName">Display Name</Label>
+                    <Label htmlFor="displayName">نام نمایشی</Label>
                     <Input id="displayName" name="displayName" defaultValue={userProfile.displayName} />
                     {state?.errors?.displayName && <p className="text-sm text-destructive">{state.errors.displayName[0]}</p>}
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="username">Username</Label>
+                    <Label htmlFor="username">نام کاربری</Label>
                     <Input id="username" name="username" defaultValue={userProfile.username} />
                     {state?.errors?.username && <p className="text-sm text-destructive">{state.errors.username[0]}</p>}
                 </div>
+                 {state?.errors?._form && <p className="text-sm text-destructive">{state.errors._form[0]}</p>}
             </CardContent>
             <CardFooter className="gap-4">
                 <SubmitButton />
-                <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
+                <Button variant="ghost" onClick={() => setIsEditing(false)}>لغو</Button>
             </CardFooter>
         </form>
     </Card>

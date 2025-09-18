@@ -4,9 +4,6 @@ import { notFound } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import ExperienceCard from "@/components/experiences/experience-card";
-import Link from 'next/link';
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth-context";
 import ProfileEditForm from "@/components/profile/profile-edit-form";
 
 export default async function ProfilePage({ params }: { params: { username: string } }) {
@@ -40,6 +37,7 @@ export default async function ProfilePage({ params }: { params: { username: stri
           </div>
         </CardHeader>
         <CardContent>
+          {/* The ProfileEditForm is now a client component that handles its own auth check */}
           <ProfileEditForm userProfile={userProfile} />
         </CardContent>
       </Card>
