@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { addComment, createExperience } from "./data";
 import type { ExperienceReport } from "@/types";
-import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { UserCredential, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 import { auth } from "./firebase";
 import { getAuth } from "firebase-admin/auth";
 import { adminApp } from "./firebase-admin";
@@ -203,6 +203,12 @@ async function firebaseAuthAction(
         case "auth/weak-password":
           errorMessage = "The password is too weak.";
           break;
+        case "auth/popup-closed-by-user":
+          errorMessage = "Sign-in process was cancelled.";
+          break;
+        case "auth/account-exists-with-different-credential":
+            errorMessage = "An account already exists with the same email address but different sign-in credentials. Try signing in with a different provider.";
+            break;
         case "auth/configuration-not-found":
           errorMessage = "Authentication is not enabled in your Firebase project. Please enable Email/Password sign-in in the Firebase console.";
           break;
