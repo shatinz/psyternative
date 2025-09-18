@@ -54,7 +54,8 @@ export async function createExperienceAction(
     revalidatePath("/");
     redirect(`/experiences/${created.id}`);
   } catch (error) {
-    console.error("Failed to create experience:", error);
+    console.error("An unexpected error occurred in createExperienceAction:");
+    console.error(error);
     return {
       errors: {
         _form: ["خطایی در هنگام ایجاد تجربه رخ داد. لطفا دوباره تلاش کنید."],
