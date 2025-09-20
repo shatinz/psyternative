@@ -1,5 +1,3 @@
-// This page is now a redirector.
-// The main profile logic is in /profile/[username]/page.tsx
 'use client';
 
 import { useAuth } from '@/hooks/use-auth';
@@ -12,13 +10,18 @@ export default function MyProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
+    if (loading) {
+      return; // Wait until loading is complete
+    }
 
     if (!user) {
+      // If not logged in, redirect to sign-in page
       router.push('/signin');
-    } else {
+    } else if (user.name) {
+      // If logged in and user object has a name, redirect to their profile
       router.push(`/profile/${user.name}`);
     }
+    // If user exists but name doesn't, we'll just show the loading skeleton until the user object is fully populated.
   }, [user, loading, router]);
 
   // Show a loading state while redirecting
