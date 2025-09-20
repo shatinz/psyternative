@@ -8,6 +8,7 @@ import { Card, CardContent, CardFooter, CardHeader } from './ui/card';
 import { Button } from './ui/button';
 import { MessageSquareReply } from 'lucide-react';
 import NestedReplyForm from './nested-reply-form';
+import { useAuth } from '@/hooks/use-auth';
 
 interface ReplyCardProps {
   reply: Reply;
@@ -16,6 +17,7 @@ interface ReplyCardProps {
 
 export default function ReplyCard({ reply, postId }: ReplyCardProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const { user } = useAuth();
 
   return (
     <div className="flex flex-col">
@@ -35,7 +37,7 @@ export default function ReplyCard({ reply, postId }: ReplyCardProps) {
         <CardContent>
           <p className="text-foreground/90">{reply.content}</p>
         </CardContent>
-        <CardFooter className="py-2 pr-4">
+        {user && <CardFooter className="py-2 pr-4">
           <Button
             variant="ghost"
             size="sm"
@@ -44,12 +46,13 @@ export default function ReplyCard({ reply, postId }: ReplyCardProps) {
             <MessageSquareReply className="ml-2 h-4 w-4" />
             پاسخ
           </Button>
-        </CardFooter>
+        </CardFooter>}
       </Card>
       
-      {showReplyForm && (
+      {showReplyForm && user && (
         <div className="mr-8 mt-4">
           <NestedReplyForm 
+            user={user}
             postId={postId}
             parentId={reply.id}
             onSuccess={() => setShowReplyForm(false)}

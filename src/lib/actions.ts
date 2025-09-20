@@ -5,10 +5,10 @@ import {revalidatePath} from 'next/cache';
 import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
 import { posts, mockUser, arts, anotherUser } from './data';
-import type { Reply } from './types';
+import type { Reply, User } from './types';
 import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword, updateProfile as updateFirebaseProfile } from 'firebase/auth';
 import { auth, db } from './firebase';
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 
 
 // Mock DB interactions
@@ -177,6 +177,7 @@ export async function createReply(
 
 const profileSchema = z.object({
   username: z.string().min(3, 'نام کاربری باید حداقل ۳ کاراکتر باشد.'),
+  userId: z.string(),
 });
 
 export async function updateProfile(
@@ -185,6 +186,7 @@ export async function updateProfile(
 ): Promise<FormState> {
   const validatedFields = profileSchema.safeParse({
     username: formData.get('username'),
+    userId: formData.get('userId'),
   });
 
   if (!validatedFields.success) {
@@ -194,21 +196,52 @@ export async function updateProfile(
       success: false,
     };
   }
+  
+  const { username, userId } = validatedFields.data;
 
-  // TODO: Fetch user from DB and check `hasChangedUsername`
-  const canChangeUsername = true; // Mock value
+  const userDocRef = doc(db, 'users', userId);
+  const userDoc = await getDoc(userDocRef);
 
-  if (!canChangeUsername) {
+  if (!userDoc.exists()) {
+    return { message: 'کاربر یافت نشد.', success: false };
+  }
+  
+  const userData = userDoc.data() as User;
+
+  if (userData.hasChangedUsername) {
     return {
       message: 'شما قبلاً نام کاربری خود را تغییر داده‌اید.',
       success: false,
     };
   }
 
+  // Check if new username is already taken
+  if (username.toLowerCase() !== userData.name.toLowerCase()) {
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('name', '==', username.toLowerCase()));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+          return {
+              message: 'این نام کاربری قبلا گرفته شده است.',
+              errors: {
+                  username: ['این نام کاربری در دسترس نیست. لطفا نام دیگری را امتحان کنید.'],
+              },
+              success: false,
+          };
+      }
+  }
+
+
   try {
-    // Pretend to save to DB
-    await mockDBSuccess();
-    console.log('Username updated to:', validatedFields.data.username);
+    await updateDoc(userDocRef, {
+      name: username,
+      hasChangedUsername: true,
+    });
+    
+    const user = auth.currentUser;
+    if (user) {
+        await updateFirebaseProfile(user, { displayName: username });
+    }
 
     revalidatePath('/profile');
     return {message: 'پروفایل شما با موفقیت به روز شد.', success: true};

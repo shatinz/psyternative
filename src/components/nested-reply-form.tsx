@@ -6,12 +6,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { SubmitButton } from './submit-button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { mockUser } from '@/lib/data';
+import type { User } from '@/lib/types';
 
 interface NestedReplyFormProps {
   postId: string;
   parentId: string;
   onSuccess: () => void;
+  user: User;
 }
 
 const initialState = {
@@ -20,11 +21,10 @@ const initialState = {
   success: false,
 };
 
-export default function NestedReplyForm({ postId, parentId, onSuccess }: NestedReplyFormProps) {
+export default function NestedReplyForm({ postId, parentId, onSuccess, user }: NestedReplyFormProps) {
   const [state, formAction] = useActionState(createReply, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const user = mockUser;
 
   useEffect(() => {
     if (state.success) {

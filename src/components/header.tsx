@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { BrainCircuit } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,11 +12,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { mockUser } from '@/lib/data';
 import { signout } from '@/lib/actions';
+import { useAuth } from '@/hooks/use-auth';
+import { Skeleton } from './ui/skeleton';
 
 export default function Header() {
-  const user = mockUser; // In a real app, you'd get this from a session
+  const { user, loading } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -28,7 +31,9 @@ export default function Header() {
         </Link>
 
         <div className="flex items-center gap-4">
-          {user ? (
+          {loading ? (
+            <Skeleton className="h-10 w-10 rounded-full" />
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -48,7 +53,7 @@ export default function Header() {
                       {user.name}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      کاربر
+                      {user.email}
                     </p>
                   </div>
                 </DropdownMenuLabel>

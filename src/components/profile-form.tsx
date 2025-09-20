@@ -57,6 +57,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
 
       <div className="md:col-span-2">
         <form action={formAction}>
+           <input type="hidden" name="userId" value={user.id} />
           <Card>
             <CardHeader>
               <CardTitle className="font-headline">ویرایش پروفایل</CardTitle>
