@@ -6,7 +6,7 @@ import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
 import { posts, mockUser, arts } from './data';
 import type { Reply } from './types';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from './firebase';
 
 
@@ -283,12 +283,28 @@ export async function signin(
       success: false,
     };
   }
-  // This is a mock implementation.
-  // In a real app, you'd use Firebase Auth to sign in a user.
-  console.log('Signing in user with data:', {
-    emailOrUsername: formData.get('emailOrUsername'),
-  });
-  await mockDBSuccess();
+
+  const { emailOrUsername, password } = validatedFields.data;
+
+  try {
+    // For now, we assume the user enters an email.
+    // A more robust solution would check if it's an email or username and query the DB if it's a username.
+    const userCredential = await signInWithEmailAndPassword(auth, emailOrUsername, password);
+
+    if (!userCredential.user.emailVerified) {
+      return {
+        message: 'لطفاً ابتدا ایمیل خود را تأیید کنید. ایمیل تأییدیه برای شما ارسال شده است.',
+        success: false,
+      };
+    }
+  } catch (e: any) {
+    let message = 'خطایی در هنگام ورود رخ داد. لطفاً دوباره امتحان کنید.';
+    if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
+      message = 'ایمیل یا رمز عبور نامعتبر است.';
+    }
+    return { message, success: false };
+  }
+
   redirect('/');
 }
 
