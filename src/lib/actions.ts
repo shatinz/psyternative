@@ -4,8 +4,11 @@ import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
-import { posts, mockUser, arts, replies as allReplies } from './data';
+import { posts, mockUser, arts } from './data';
 import type { Reply } from './types';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { auth } from './firebase';
+
 
 // Mock DB interactions
 async function mockDBSuccess() {
@@ -241,13 +244,25 @@ export async function signup(
     };
   }
 
-  // This is a mock implementation.
-  // In a real app, you'd use Firebase Auth to create a user.
-  console.log('Signing up user with data:', {
-    email: formData.get('email'),
-  });
-  await mockDBSuccess();
-  redirect('/');
+  const { email, password } = validatedFields.data;
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(userCredential.user);
+    return {
+      message: 'ثبت نام موفقیت آمیز بود. لطفا ایمیل خود را برای تایید چک کنید.',
+      success: true,
+    };
+  } catch (e: any) {
+    let message = 'خطایی در هنگام ثبت نام رخ داد.';
+    if (e.code === 'auth/email-already-in-use') {
+      message = 'این ایمیل قبلا استفاده شده است.';
+    }
+    return {
+      message,
+      success: false,
+    };
+  }
 }
 
 const signinSchema = z.object({
