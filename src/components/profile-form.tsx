@@ -5,6 +5,7 @@ import { updateProfile } from '@/lib/actions';
 import type { User } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { SubmitButton } from './submit-button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
@@ -62,10 +63,10 @@ export default function ProfileForm({ user }: ProfileFormProps) {
             <CardHeader>
               <CardTitle className="font-headline">ویرایش پروفایل</CardTitle>
               <CardDescription>
-                نام کاربری خود را می‌توانید تنها یک بار تغییر دهید.
+                اطلاعات عمومی و بیوگرافی خود را ویرایش کنید.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">نام کاربری</Label>
                 <Input
@@ -74,14 +75,30 @@ export default function ProfileForm({ user }: ProfileFormProps) {
                   defaultValue={user.name}
                   disabled={user.hasChangedUsername}
                 />
+                 <p className="text-xs text-muted-foreground">
+                  نام کاربری خود را می‌توانید تنها یک بار تغییر دهید.
+                </p>
                 {state.errors?.username && (
                   <p className="text-sm text-destructive">{state.errors.username[0]}</p>
                 )}
               </div>
+               <div className="space-y-2">
+                <Label htmlFor="bio">بیوگرافی</Label>
+                <Textarea
+                  id="bio"
+                  name="bio"
+                  defaultValue={user.bio}
+                  placeholder="کمی در مورد خودتان بنویسید..."
+                  rows={4}
+                />
+                 {state.errors?.bio && (
+                  <p className="text-sm text-destructive">{state.errors.bio[0]}</p>
+                )}
+              </div>
             </CardContent>
             <CardFooter>
-              <SubmitButton disabled={user.hasChangedUsername}>
-                {user.hasChangedUsername ? 'تغییر داده شده' : 'ذخیره تغییرات'}
+              <SubmitButton>
+                ذخیره تغییرات
               </SubmitButton>
             </CardFooter>
           </Card>

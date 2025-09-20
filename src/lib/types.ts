@@ -6,6 +6,7 @@ export type User = {
   avatarUrl: string;
   hasChangedUsername: boolean;
   email: string | null;
+  bio?: string;
 };
 
 export type Reply = {

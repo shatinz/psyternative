@@ -7,6 +7,7 @@ import ReplyCard from '@/components/reply-card';
 import { Separator } from '@/components/ui/separator';
 import { MessageCircle } from 'lucide-react';
 import ReplyForm from '@/components/reply-form';
+import Link from 'next/link';
 
 export default function PostPage({ params }: { params: { id: string } }) {
   const post = posts.find(p => p.id === params.id);
@@ -23,7 +24,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
             {post.title}
           </h1>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
+            <Link href={`/profile/${post.author.name}`} className="flex items-center gap-2 hover:underline">
               <Avatar className="h-8 w-8">
                 <AvatarImage
                   src={post.author.avatarUrl}
@@ -32,7 +33,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
                 <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <span>{post.author.name}</span>
-            </div>
+            </Link>
             <span>•</span>
             <time dateTime={post.createdAt.toISOString()}>
               {format(post.createdAt, 'd MMMM yyyy')}

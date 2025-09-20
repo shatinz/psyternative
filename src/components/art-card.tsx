@@ -10,6 +10,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from './ui/button';
 import { ShoppingCart } from 'lucide-react';
+import Link from 'next/link';
 
 interface ArtCardProps {
   art: Art;
@@ -38,13 +39,13 @@ export default function ArtCard({ art }: ArtCardProps) {
         </p>
       </CardContent>
       <CardFooter className="flex items-center justify-between p-4 pt-0">
-        <div className="flex items-center gap-2">
+        <Link href={`/profile/${art.seller.name}`} className="flex items-center gap-2 hover:underline">
           <Avatar className="h-8 w-8">
             <AvatarImage src={art.seller.avatarUrl} alt={art.seller.name} />
             <AvatarFallback>{art.seller.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <span className="text-sm font-medium">{art.seller.name}</span>
-        </div>
+        </Link>
         <div className="font-headline text-lg font-bold text-primary">
           {art.price.toLocaleString('fa-IR')} تومان
         </div>

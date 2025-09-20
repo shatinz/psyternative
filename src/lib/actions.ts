@@ -177,6 +177,7 @@ export async function createReply(
 
 const profileSchema = z.object({
   username: z.string().min(3, 'نام کاربری باید حداقل ۳ کاراکتر باشد.'),
+  bio: z.string().max(200, 'بیوگرافی نمی‌تواند بیشتر از ۲۰۰ کاراکتر باشد.').optional(),
   userId: z.string(),
 });
 
@@ -186,6 +187,7 @@ export async function updateProfile(
 ): Promise<FormState> {
   const validatedFields = profileSchema.safeParse({
     username: formData.get('username'),
+    bio: formData.get('bio'),
     userId: formData.get('userId'),
   });
 
@@ -197,7 +199,7 @@ export async function updateProfile(
     };
   }
   
-  const { username, userId } = validatedFields.data;
+  const { username, bio, userId } = validatedFields.data;
 
   const userDocRef = doc(db, 'users', userId);
   const userDoc = await getDoc(userDocRef);
@@ -207,43 +209,50 @@ export async function updateProfile(
   }
   
   const userData = userDoc.data() as User;
+  let hasChangedUsername = userData.hasChangedUsername;
 
-  if (userData.hasChangedUsername) {
-    return {
-      message: 'شما قبلاً نام کاربری خود را تغییر داده‌اید.',
-      success: false,
-    };
-  }
-
-  // Check if new username is already taken
+  // Only check for username uniqueness and update Firebase Auth display name if it has changed
   if (username.toLowerCase() !== userData.name.toLowerCase()) {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('name', '==', username.toLowerCase()));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-          return {
-              message: 'این نام کاربری قبلا گرفته شده است.',
-              errors: {
-                  username: ['این نام کاربری در دسترس نیست. لطفا نام دیگری را امتحان کنید.'],
-              },
-              success: false,
-          };
-      }
+    if (userData.hasChangedUsername) {
+      return {
+        message: 'شما قبلاً نام کاربری خود را تغییر داده‌اید.',
+        success: false,
+      };
+    }
+
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('name', '==', username.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        return {
+            message: 'این نام کاربری قبلا گرفته شده است.',
+            errors: {
+                username: ['این نام کاربری در دسترس نیست. لطفا نام دیگری را امتحان کنید.'],
+            },
+            success: false,
+        };
+    }
+    hasChangedUsername = true;
+    const user = auth.currentUser;
+    if (user) {
+        await updateFirebaseProfile(user, { displayName: username });
+    }
   }
 
 
   try {
     await updateDoc(userDocRef, {
       name: username,
-      hasChangedUsername: true,
+      bio: bio || '',
+      hasChangedUsername,
     });
     
-    const user = auth.currentUser;
-    if (user) {
-        await updateFirebaseProfile(user, { displayName: username });
+    revalidatePath(`/profile/${username}`);
+    revalidatePath('/profile');
+    if (username.toLowerCase() !== userData.name.toLowerCase()) {
+        redirect(`/profile/${username}`);
     }
 
-    revalidatePath('/profile');
     return {message: 'پروفایل شما با موفقیت به روز شد.', success: true};
   } catch (e) {
     return {
@@ -306,6 +315,7 @@ export async function signup(
         email: email,
         avatarUrl: `https://picsum.photos/seed/${userCredential.user.uid}/100/100`,
         hasChangedUsername: false,
+        bio: '',
     });
 
     await sendEmailVerification(userCredential.user);
@@ -448,4 +458,28 @@ export async function createArt(
       success: false,
     };
   }
+}
+
+
+export async function getProfileUser(username: string): Promise<User | null> {
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, where('name', '==', username));
+  const querySnapshot = await getDocs(q);
+
+  if (querySnapshot.empty) {
+    return null;
+  }
+  
+  // We assume usernames are unique, so we take the first result.
+  const userDoc = querySnapshot.docs[0];
+  const userData = userDoc.data();
+
+  return {
+    id: userDoc.id,
+    name: userData.name,
+    email: userData.email,
+    avatarUrl: userData.avatarUrl,
+    hasChangedUsername: userData.hasChangedUsername,
+    bio: userData.bio,
+  };
 }

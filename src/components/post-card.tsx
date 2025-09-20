@@ -25,11 +25,13 @@ export default function PostCard({ post }: PostCardProps) {
           </CardTitle>
         </Link>
         <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
-          <Avatar className="h-6 w-6">
-            <AvatarImage src={post.author.avatarUrl} alt={post.author.name} />
-            <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <span>{post.author.name}</span>
+          <Link href={`/profile/${post.author.name}`} className="flex items-center gap-2 hover:underline">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={post.author.avatarUrl} alt={post.author.name} />
+              <AvatarFallback>{post.author.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <span>{post.author.name}</span>
+          </Link>
           <span>•</span>
           <span>{formatDistanceToNow(post.createdAt)} پیش</span>
         </div>
