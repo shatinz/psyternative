@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
-import { posts, mockUser, arts } from './data';
+import { posts, mockUser, arts, anotherUser } from './data';
 import type { Reply } from './types';
 import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword, updateProfile as updateFirebaseProfile } from 'firebase/auth';
 import { auth } from './firebase';
@@ -14,6 +14,9 @@ import { auth } from './firebase';
 async function mockDBSuccess() {
   return new Promise(resolve => setTimeout(resolve, 1000));
 }
+
+// Mock database of taken usernames for demonstration
+const takenUsernames = [mockUser.name.toLowerCase(), anotherUser.name.toLowerCase()];
 
 type FormState = {
   message: string;
@@ -247,10 +250,24 @@ export async function signup(
 
   const { email, password, username } = validatedFields.data;
 
+  // Check if username is already taken (mock implementation)
+  if (takenUsernames.includes(username.toLowerCase())) {
+    return {
+      message: 'این نام کاربری قبلا گرفته شده است.',
+      errors: {
+        username: ['این نام کاربری در دسترس نیست. لطفا نام دیگری را امتحان کنید.'],
+      },
+      success: false,
+    };
+  }
+
+
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     await updateFirebaseProfile(userCredential.user, { displayName: username });
     await sendEmailVerification(userCredential.user);
+    // Add the new username to our mock list
+    takenUsernames.push(username.toLowerCase());
     return {
       message: 'ثبت نام موفقیت آمیز بود. لطفا ایمیل خود را برای تایید چک کنید. اگر ایمیل در صندوق ورودی شما نبود، پوشه اسپم را نیز بررسی کنید.',
       success: true,
