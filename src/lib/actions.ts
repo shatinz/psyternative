@@ -140,6 +140,7 @@ export async function signup(
 }
 
 const signinSchema = z.object({
+  username: z.string().min(1, 'نام کاربری الزامی است.'),
   email: z.string().email('ایمیل نامعتبر است.'),
   password: z.string().min(1, 'رمز عبور الزامی است.'),
 });
@@ -151,6 +152,7 @@ export async function signin(
   // This is a mock implementation.
   // In a real app, you'd use Firebase Auth to sign in a user.
   console.log('Signing in user with data:', {
+    username: formData.get('username'),
     email: formData.get('email'),
   });
   await mockDBSuccess();
