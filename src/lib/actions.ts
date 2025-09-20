@@ -250,7 +250,7 @@ export async function signup(
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     await sendEmailVerification(userCredential.user);
     return {
-      message: 'ثبت نام موفقیت آمیز بود. لطفا ایمیل خود را برای تایید چک کنید.',
+      message: 'ثبت نام موفقیت آمیز بود. لطفا ایمیل خود را برای تایید چک کنید. اگر ایمیل در صندوق ورودی شما نبود، پوشه اسپم را نیز بررسی کنید.',
       success: true,
     };
   } catch (e: any) {
