@@ -3,8 +3,8 @@
 import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
-import {useToast} from '@/hooks/use-toast';
 import {redirect} from 'next/navigation';
+import { posts, mockUser } from './data';
 
 // Mock DB interactions
 async function mockDBSuccess() {
@@ -56,9 +56,18 @@ export async function createPost(
       };
     }
 
-    // Pretend to save to DB
+    // Add post to our mock DB
+    const newPost = {
+      id: `post-${Date.now()}`,
+      title,
+      content,
+      author: mockUser,
+      createdAt: new Date(),
+      sectionSlug,
+      replies: [],
+    };
+    posts.unshift(newPost);
     await mockDBSuccess();
-    console.log('Post created:', {title, content, sectionSlug});
 
     revalidatePath(`/sections/${sectionSlug}`);
     return {message: 'پست شما با موفقیت ایجاد شد.', success: true};
@@ -106,10 +115,20 @@ export async function createReply(
         success: false,
       };
     }
-
-    // Pretend to save to DB
+    
+    // Add reply to our mock DB
+    const post = posts.find(p => p.id === postId);
+    if (post) {
+      const newReply = {
+        id: `reply-${Date.now()}`,
+        content,
+        author: mockUser,
+        createdAt: new Date(),
+      };
+      post.replies.push(newReply);
+    }
+    
     await mockDBSuccess();
-    console.log('Reply created:', { content, postId });
 
     revalidatePath(`/posts/${postId}`);
     return { message: 'پاسخ شما با موفقیت ثبت شد.', success: true };
