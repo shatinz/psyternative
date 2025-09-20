@@ -6,7 +6,7 @@ import Image from 'next/image';
 import ReplyCard from '@/components/reply-card';
 import { Separator } from '@/components/ui/separator';
 import { MessageCircle } from 'lucide-react';
-import PostForm from '@/components/post-form'; // Using PostForm for replies for simplicity
+import ReplyForm from '@/components/reply-form';
 
 export default function PostPage({ params }: { params: { id: string } }) {
   const post = posts.find(p => p.id === params.id);
@@ -70,16 +70,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
 
       <Separator className="my-12" />
 
-      {/* Reply form would go here. We can reuse PostForm with slight modifications,
-          but for now it's omitted to represent a user adding a reply.
-          A real implementation would have a dedicated ReplyForm.
-      */}
-      <div>
-        <h3 className="mb-4 font-headline text-xl">پاسخ خود را ثبت کنید</h3>
-        <p className="text-muted-foreground">
-          قابلیت ثبت پاسخ به زودی اضافه خواهد شد.
-        </p>
-      </div>
+      <ReplyForm postId={post.id} />
     </div>
   );
 }

@@ -11,17 +11,17 @@ async function mockDBSuccess() {
   return new Promise(resolve => setTimeout(resolve, 1000));
 }
 
-const postSchema = z.object({
-  title: z.string().min(3, 'عنوان باید حداقل ۳ کاراکتر باشد.'),
-  content: z.string().min(10, 'محتوا باید حداقل ۱۰ کاراکتر باشد.'),
-  sectionSlug: z.string(),
-});
-
 type FormState = {
   message: string;
   errors?: Record<string, string[] | undefined>;
   success: boolean;
 };
+
+const postSchema = z.object({
+  title: z.string().min(3, 'عنوان باید حداقل ۳ کاراکتر باشد.'),
+  content: z.string().min(10, 'محتوا باید حداقل ۱۰ کاراکتر باشد.'),
+  sectionSlug: z.string(),
+});
 
 export async function createPost(
   prevState: FormState,
@@ -65,6 +65,57 @@ export async function createPost(
   } catch (e) {
     return {
       message: 'خطایی در هنگام ایجاد پست رخ داد.',
+      success: false,
+    };
+  }
+}
+
+const replySchema = z.object({
+  content: z.string().min(3, 'پاسخ باید حداقل ۳ کاراکتر باشد.'),
+  postId: z.string(),
+});
+
+export async function createReply(
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+  const validatedFields = replySchema.safeParse({
+    content: formData.get('content'),
+    postId: formData.get('postId'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      message: 'لطفاً فرم را به درستی پر کنید.',
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
+
+  const { content, postId } = validatedFields.data;
+
+  try {
+    const moderationResult = await aiContentModeration({ text: content });
+
+    if (moderationResult.flagForReview) {
+      return {
+        message: 'پاسخ شما با قوانین مغایرت دارد.',
+        errors: {
+          content: [`دلیل: ${moderationResult.reason || 'محتوای نامناسب'}`],
+        },
+        success: false,
+      };
+    }
+
+    // Pretend to save to DB
+    await mockDBSuccess();
+    console.log('Reply created:', { content, postId });
+
+    revalidatePath(`/posts/${postId}`);
+    return { message: 'پاسخ شما با موفقیت ثبت شد.', success: true };
+  } catch (e) {
+    return {
+      message: 'خطایی در هنگام ثبت پاسخ رخ داد.',
       success: false,
     };
   }
@@ -130,6 +181,16 @@ export async function signup(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
+  const validatedFields = signupSchema.safeParse(Object.fromEntries(formData));
+
+  if (!validatedFields.success) {
+    return {
+      message: 'لطفا فرم را به درستی پر کنید.',
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
+
   // This is a mock implementation.
   // In a real app, you'd use Firebase Auth to create a user.
   console.log('Signing up user with data:', {
@@ -149,6 +210,15 @@ export async function signin(
   prevState: FormState,
   formData: FormData
 ): Promise<FormState> {
+  const validatedFields = signinSchema.safeParse(Object.fromEntries(formData));
+
+  if (!validatedFields.success) {
+    return {
+      message: 'لطفا فرم را به درستی پر کنید.',
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
   // This is a mock implementation.
   // In a real app, you'd use Firebase Auth to sign in a user.
   console.log('Signing in user with data:', {
