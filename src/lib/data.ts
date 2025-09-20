@@ -1,5 +1,5 @@
-import type { User, Section, Post, Reply } from './types';
-import { BrainCircuit, Dna, Leaf, Moon } from 'lucide-react';
+import type { User, Section, Post, Reply, Art } from './types';
+import { BrainCircuit, Dna, Leaf, Moon, Palette } from 'lucide-react';
 
 export const mockUser: User = {
   id: 'user-1',
@@ -39,6 +39,12 @@ export const sections: Section[] = [
     slug: 'ethnobotany',
     description: 'کاوش در گیاهان مقدس و دانش سنتی فرهنگ‌های مختلف.',
     icon: Leaf,
+  },
+  {
+    name: 'گالری',
+    slug: 'gallery',
+    description: 'بازاری برای خرید و فروش آثار هنری و صنایع دستی اعضا.',
+    icon: Palette,
   },
 ];
 
@@ -92,5 +98,35 @@ export const posts: Post[] = [
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72),
     sectionSlug: 'ethnobotany',
     replies: [],
+  },
+];
+
+export const arts: Art[] = [
+  {
+    id: 'art-1',
+    title: 'ظرف سفالی دست‌ساز',
+    description: 'یک ظرف سفالی زیبا که با الهام از طبیعت ساخته شده است. مناسب برای دکوراسیون منزل.',
+    price: 150000,
+    imageUrl: 'https://picsum.photos/seed/art1/600/400',
+    seller: mockUser,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
+  },
+  {
+    id: 'art-2',
+    title: 'نقاشی آبرنگ کهکشان',
+    description: 'نقاشی آبرنگ از یک سحابی دوردست. رنگ‌های زنده و جزئیات خیره‌کننده.',
+    price: 350000,
+    imageUrl: 'https://picsum.photos/seed/art2/600/400',
+    seller: anotherUser,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 28),
+  },
+    {
+    id: 'art-3',
+    title: 'دستبند مکرومه با سنگ یشم',
+    description: 'دستبند دستباف مکرومه با یک سنگ یشم طبیعی در مرکز آن. اثری آرامش‌بخش و زیبا.',
+    price: 95000,
+    imageUrl: 'https://picsum.photos/seed/art3/600/400',
+    seller: mockUser,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 50),
   },
 ];

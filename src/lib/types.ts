@@ -30,3 +30,13 @@ export type Section = {
   description: string;
   icon: LucideIcon;
 };
+
+export type Art = {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  seller: User;
+  createdAt: Date;
+};

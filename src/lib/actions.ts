@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
-import { posts, mockUser } from './data';
+import { posts, mockUser, arts } from './data';
 
 // Mock DB interactions
 async function mockDBSuccess() {
@@ -254,4 +254,68 @@ export async function signout() {
   console.log('Signing out user');
   await mockDBSuccess();
   redirect('/signin');
+}
+
+const artSchema = z.object({
+  title: z.string().min(3, 'عنوان باید حداقل ۳ کاراکتر باشد.'),
+  description: z.string().min(10, 'توضیحات باید حداقل ۱۰ کاراکتر باشد.'),
+  price: z.coerce.number().min(0, 'قیمت نمی‌تواند منفی باشد.'),
+});
+
+export async function createArt(
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+  // In a real app, you would handle file uploads properly.
+  // For this mock, we'll just use a placeholder image URL.
+  const validatedFields = artSchema.safeParse({
+    title: formData.get('title'),
+    description: formData.get('description'),
+    price: formData.get('price'),
+  });
+
+  if (!validatedFields.success) {
+    return {
+      message: 'لطفاً فرم را به درستی پر کنید.',
+      errors: validatedFields.error.flatten().fieldErrors,
+      success: false,
+    };
+  }
+
+  const { title, description, price } = validatedFields.data;
+
+  try {
+    const moderationResult = await aiContentModeration({ text: `${title} ${description}` });
+
+    if (moderationResult.flagForReview) {
+      return {
+        message: 'محتوای شما با قوانین مغایرت دارد.',
+        errors: {
+          description: [`دلیل: ${moderationResult.reason || 'محتوای نامناسب'}`],
+        },
+        success: false,
+      };
+    }
+
+    // Add art to our mock DB
+    const newArt = {
+      id: `art-${Date.now()}`,
+      title,
+      description,
+      price,
+      imageUrl: `https://picsum.photos/seed/${Date.now()}/600/400`,
+      seller: mockUser,
+      createdAt: new Date(),
+    };
+    arts.unshift(newArt);
+    await mockDBSuccess();
+
+    revalidatePath('/gallery');
+    return { message: 'اثر هنری شما با موفقیت به گالری اضافه شد.', success: true };
+  } catch (e) {
+    return {
+      message: 'خطایی در هنگام افزودن اثر هنری رخ داد.',
+      success: false,
+    };
+  }
 }
