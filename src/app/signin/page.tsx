@@ -45,29 +45,16 @@ export default function SigninPage() {
               </Alert>
             )}
              <div className="space-y-2">
-              <Label htmlFor="username">نام کاربری</Label>
+              <Label htmlFor="emailOrUsername">ایمیل یا نام کاربری</Label>
               <Input
-                id="username"
-                name="username"
+                id="emailOrUsername"
+                name="emailOrUsername"
                 type="text"
-                placeholder="yourusername"
-                required
-              />
-              {state.errors?.username && (
-                <p className="text-sm text-destructive">{state.errors.username[0]}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">ایمیل</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
                 placeholder="email@example.com"
                 required
               />
-              {state.errors?.email && (
-                <p className="text-sm text-destructive">{state.errors.email[0]}</p>
+              {state.errors?.emailOrUsername && (
+                <p className="text-sm text-destructive">{state.errors.emailOrUsername[0]}</p>
               )}
             </div>
             <div className="space-y-2">
