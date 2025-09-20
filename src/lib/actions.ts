@@ -1,10 +1,10 @@
 'use server';
 
-import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-import { aiContentModeration } from '@/ai/flows/ai-content-moderation';
-import { useToast } from '@/hooks/use-toast';
+import {z} from 'zod';
+import {revalidatePath} from 'next/cache';
+import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
+import {useToast} from '@/hooks/use-toast';
+import {redirect} from 'next/navigation';
 
 // Mock DB interactions
 async function mockDBSuccess() {
@@ -41,18 +41,16 @@ export async function createPost(
     };
   }
 
-  const { title, content, sectionSlug } = validatedFields.data;
+  const {title, content, sectionSlug} = validatedFields.data;
 
   try {
-    const moderationResult = await aiContentModeration({ text: content });
+    const moderationResult = await aiContentModeration({text: content});
 
     if (moderationResult.flagForReview) {
       return {
         message: 'محتوای شما با قوانین مغایرت دارد.',
         errors: {
-          content: [
-            `دلیل: ${moderationResult.reason || 'محتوای نامناسب'}`,
-          ],
+          content: [`دلیل: ${moderationResult.reason || 'محتوای نامناسب'}`],
         },
         success: false,
       };
@@ -60,10 +58,10 @@ export async function createPost(
 
     // Pretend to save to DB
     await mockDBSuccess();
-    console.log('Post created:', { title, content, sectionSlug });
+    console.log('Post created:', {title, content, sectionSlug});
 
     revalidatePath(`/sections/${sectionSlug}`);
-    return { message: 'پست شما با موفقیت ایجاد شد.', success: true };
+    return {message: 'پست شما با موفقیت ایجاد شد.', success: true};
   } catch (e) {
     return {
       message: 'خطایی در هنگام ایجاد پست رخ داد.',
@@ -108,11 +106,61 @@ export async function updateProfile(
     console.log('Username updated to:', validatedFields.data.username);
 
     revalidatePath('/profile');
-    return { message: 'پروفایل شما با موفقیت به روز شد.', success: true };
+    return {message: 'پروفایل شما با موفقیت به روز شد.', success: true};
   } catch (e) {
     return {
       message: 'خطایی در هنگام به روز رسانی پروفایل رخ داد.',
       success: false,
     };
   }
+}
+
+const signupSchema = z
+  .object({
+    email: z.string().email('ایمیل نامعتبر است.'),
+    password: z.string().min(6, 'رمز عبور باید حداقل ۶ کاراکتر باشد.'),
+    confirmPassword: z.string(),
+  })
+  .refine(data => data.password === data.confirmPassword, {
+    message: 'رمزهای عبور یکسان نیستند.',
+    path: ['confirmPassword'],
+  });
+
+export async function signup(
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+  // This is a mock implementation.
+  // In a real app, you'd use Firebase Auth to create a user.
+  console.log('Signing up user with data:', {
+    email: formData.get('email'),
+  });
+  await mockDBSuccess();
+  redirect('/');
+}
+
+const signinSchema = z.object({
+  email: z.string().email('ایمیل نامعتبر است.'),
+  password: z.string().min(1, 'رمز عبور الزامی است.'),
+});
+
+export async function signin(
+  prevState: FormState,
+  formData: FormData
+): Promise<FormState> {
+  // This is a mock implementation.
+  // In a real app, you'd use Firebase Auth to sign in a user.
+  console.log('Signing in user with data:', {
+    email: formData.get('email'),
+  });
+  await mockDBSuccess();
+  redirect('/');
+}
+
+export async function signout() {
+  // This is a mock implementation.
+  // In a real app, you'd use Firebase Auth to sign out a user.
+  console.log('Signing out user');
+  await mockDBSuccess();
+  redirect('/signin');
 }

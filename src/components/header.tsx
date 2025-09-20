@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { mockUser } from '@/lib/data';
+import { signout } from '@/lib/actions';
 
 export default function Header() {
   const user = mockUser; // In a real app, you'd get this from a session
@@ -57,13 +58,24 @@ export default function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled>تنظیمات</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>خروج</DropdownMenuItem>
+                <form action={signout}>
+                  <DropdownMenuItem asChild>
+                    <button type="submit" className="w-full text-right">
+                      خروج
+                    </button>
+                  </DropdownMenuItem>
+                </form>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild>
-              <Link href="#">ورود</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost">
+                <Link href="/signin">ورود</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/signup">ثبت نام</Link>
+              </Button>
+            </div>
           )}
         </div>
       </div>
