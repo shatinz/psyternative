@@ -100,12 +100,9 @@ export default function ArtForm() {
                         <p className="mb-2 text-sm text-muted-foreground"><span className="font-semibold">برای آپلود کلیک کنید</span></p>
                         <p className="text-xs text-muted-foreground">SVG, PNG, JPG (حداکثر 2 مگابایت)</p>
                     </div>
-                    <Input id="image" name="image" type="file" className="hidden" disabled />
+                    <Input id="image" name="image" type="file" className="hidden" />
                 </Label>
             </div>
-            <p className="mt-1 text-xs text-muted-foreground">
-              * قابلیت آپلود عکس در حال حاضر غیرفعال است. یک تصویر پیش‌فرض برای شما انتخاب می‌شود.
-            </p>
            </div>
         </CardContent>
         <CardFooter>
