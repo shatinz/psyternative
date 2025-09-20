@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user1",
+      "description": "Avatar for a sample user",
+      "imageUrl": "https://picsum.photos/seed/user1/100/100",
+      "imageHint": "profile portrait"
+    },
+    {
+      "id": "user2",
+      "description": "Avatar for another sample user",
+      "imageUrl": "https://picsum.photos/seed/user2/100/100",
+      "imageHint": "abstract person"
+    },
+    {
+      "id": "post-bg",
+      "description": "Abstract background for a post",
+      "imageUrl": "https://picsum.photos/seed/postbg/1200/400",
+      "imageHint": "galaxy nebula"
+    }
+  ]
 }
