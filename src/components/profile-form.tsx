@@ -1,7 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
-import { useEffect } from 'react';
+import { useActionState, useEffect } from 'react';
 import { updateProfile } from '@/lib/actions';
 import type { User } from '@/lib/types';
 import { Label } from '@/components/ui/label';
@@ -23,7 +22,7 @@ const initialState = {
 };
 
 export default function ProfileForm({ user }: ProfileFormProps) {
-  const [state, formAction] = useFormState(updateProfile, initialState);
+  const [state, formAction] = useActionState(updateProfile, initialState);
   const { toast } = useToast();
 
   useEffect(() => {

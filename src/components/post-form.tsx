@@ -1,7 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
-import { useEffect, useRef } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { createPost } from '@/lib/actions';
 import {
   Card,
@@ -28,7 +27,7 @@ const initialState = {
 };
 
 export default function PostForm({ sectionSlug }: PostFormProps) {
-  const [state, formAction] = useFormState(createPost, initialState);
+  const [state, formAction] = useActionState(createPost, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
 
