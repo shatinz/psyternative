@@ -47,6 +47,19 @@ export default function SignupPage() {
             {!state.success && (
               <>
                 <div className="space-y-2">
+                  <Label htmlFor="username">نام کاربری</Label>
+                  <Input
+                    id="username"
+                    name="username"
+                    type="text"
+                    placeholder="یک نام کاربری انتخاب کنید"
+                    required
+                  />
+                  {state.errors?.username && (
+                    <p className="text-sm text-destructive">{state.errors.username[0]}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="email">ایمیل</Label>
                   <Input
                     id="email"
