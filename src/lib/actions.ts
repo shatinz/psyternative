@@ -4,7 +4,8 @@ import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
-import { posts, mockUser, arts } from './data';
+import { posts, mockUser, arts, replies as allReplies } from './data';
+import type { Reply } from './types';
 
 // Mock DB interactions
 async function mockDBSuccess() {
@@ -82,7 +83,24 @@ export async function createPost(
 const replySchema = z.object({
   content: z.string().min(3, 'پاسخ باید حداقل ۳ کاراکتر باشد.'),
   postId: z.string(),
+  parentId: z.string().optional(),
 });
+
+function findReplyById(replies: Reply[], id: string): Reply | undefined {
+  for (const reply of replies) {
+    if (reply.id === id) {
+      return reply;
+    }
+    if (reply.replies) {
+      const found = findReplyById(reply.replies, id);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return undefined;
+}
+
 
 export async function createReply(
   prevState: FormState,
@@ -91,6 +109,7 @@ export async function createReply(
   const validatedFields = replySchema.safeParse({
     content: formData.get('content'),
     postId: formData.get('postId'),
+    parentId: formData.get('parentId'),
   });
 
   if (!validatedFields.success) {
@@ -101,7 +120,7 @@ export async function createReply(
     };
   }
 
-  const { content, postId } = validatedFields.data;
+  const { content, postId, parentId } = validatedFields.data;
 
   try {
     const moderationResult = await aiContentModeration({ text: content });
@@ -119,13 +138,25 @@ export async function createReply(
     // Add reply to our mock DB
     const post = posts.find(p => p.id === postId);
     if (post) {
-      const newReply = {
+      const newReply: Reply = {
         id: `reply-${Date.now()}`,
         content,
         author: mockUser,
         createdAt: new Date(),
+        replies: [],
       };
-      post.replies.push(newReply);
+      
+      if (parentId) {
+        // It's a nested reply
+        const parentReply = findReplyById(post.replies, parentId);
+        if (parentReply) {
+          parentReply.replies = parentReply.replies || [];
+          parentReply.replies.push(newReply);
+        }
+      } else {
+        // It's a top-level reply
+        post.replies.push(newReply);
+      }
     }
     
     await mockDBSuccess();

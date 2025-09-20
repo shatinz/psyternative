@@ -48,13 +48,22 @@ export const sections: Section[] = [
   },
 ];
 
-const replies: Reply[] = [
+export const replies: Reply[] = [
   {
     id: 'reply-1',
     author: anotherUser,
     content:
       'تجربه بسیار جالبی بود! من هم اخیراً مدیتیشن را شروع کرده‌ام و تأثیرات مثبتی در کاهش استرسم دیده‌ام. از چه تکنیکی بیشتر استفاده می‌کنی؟',
     createdAt: new Date(Date.now() - 1000 * 60 * 30),
+    replies: [
+        {
+        id: 'reply-2',
+        author: mockUser,
+        content: 'معمولاً از تکنیک تمرکز بر تنفس استفاده می‌کنم. ساده و مؤثره.',
+        createdAt: new Date(Date.now() - 1000 * 60 * 15),
+        replies: [],
+        }
+    ],
   },
 ];
 

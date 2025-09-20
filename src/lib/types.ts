@@ -12,6 +12,7 @@ export type Reply = {
   author: User;
   content: string;
   createdAt: Date;
+  replies?: Reply[];
 };
 
 export type Post = {

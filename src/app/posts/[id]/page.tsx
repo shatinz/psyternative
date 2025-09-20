@@ -63,7 +63,7 @@ export default function PostPage({ params }: { params: { id: string } }) {
         </h2>
         <div className="space-y-6">
           {post.replies.map(reply => (
-            <ReplyCard key={reply.id} reply={reply} />
+            <ReplyCard key={reply.id} reply={reply} postId={post.id} />
           ))}
         </div>
       </section>
