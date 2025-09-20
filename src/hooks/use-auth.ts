@@ -24,6 +24,7 @@ export function useAuth() {
             email: firebaseUser.email,
             avatarUrl: userData.avatarUrl || `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
             hasChangedUsername: userData.hasChangedUsername || false,
+            bio: userData.bio || '',
           });
         } else {
             // This case might happen if the user was created in Auth but not in Firestore
@@ -33,6 +34,7 @@ export function useAuth() {
                 email: firebaseUser.email,
                 avatarUrl: `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
                 hasChangedUsername: false,
+                bio: '',
             });
         }
       } else {
