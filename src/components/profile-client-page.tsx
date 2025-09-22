@@ -65,7 +65,7 @@ export default function ProfileClientPage({
                     data-ai-hint="profile portrait"
                   />
                   <AvatarFallback className="text-4xl">
-                    {profileUser.name.charAt(0)}
+                    {(profileUser.name ? profileUser.name.charAt(0) : '')}
                   </AvatarFallback>
                 </Avatar>
                 <CardTitle className="pt-4 font-headline text-2xl">

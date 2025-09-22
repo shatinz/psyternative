@@ -1,16 +1,22 @@
+import React from 'react';
 import { notFound } from 'next/navigation';
-import { sections, posts } from '@/lib/data';
+import { sections } from '@/lib/data';
+import { getPostsBySection } from '../../../db/posts';
 import PostCard from '@/components/post-card';
 import PostForm from '@/components/post-form';
 import { Separator } from '@/components/ui/separator';
 
-export default function SectionPage({ params }: { params: { slug: string } }) {
-  const section = sections.find(s => s.slug === params.slug);
+export default function SectionPage({ params }: { params: Promise<{ slug: string }> }) {
+  const unwrappedParams = React.use(params);
+  const section = sections.find(s => s.slug === unwrappedParams.slug);
   if (!section) {
     notFound();
   }
 
-  const sectionPosts = posts.filter(p => p.sectionSlug === params.slug);
+  const [sectionPosts, setSectionPosts] = React.useState([]);
+  React.useEffect(() => {
+    getPostsBySection(unwrappedParams.slug).then(setSectionPosts);
+  }, [unwrappedParams.slug]);
 
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">

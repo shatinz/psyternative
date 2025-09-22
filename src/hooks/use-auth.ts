@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, setPersistence, browserLocalPersistence } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import type { User } from '@/lib/types';
 
 export function useAuth() {
@@ -11,37 +10,35 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set persistence only on the client
     setPersistence(auth, browserLocalPersistence)
       .then(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
           if (firebaseUser) {
-            // User is signed in.
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              setUser({
-                id: firebaseUser.uid,
-                name: userData.name || firebaseUser.displayName || 'User',
-                email: firebaseUser.email,
-                avatarUrl: userData.avatarUrl || `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
-                hasChangedUsername: userData.hasChangedUsername || false,
-                bio: userData.bio || '',
+            // Fetch user data from API route
+            fetch(`/api/user?uid=${firebaseUser.uid}`)
+              .then(res => res.json())
+              .then(({ user: userData }) => {
+                if (userData) {
+                  setUser({
+                    id: firebaseUser.uid,
+                    name: userData.username || firebaseUser.displayName || 'User',
+                    email: userData.email || firebaseUser.email,
+                    avatarUrl: userData.avatar_url || `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
+                    hasChangedUsername: userData.has_changed_username || false,
+                    bio: userData.bio || '',
+                  });
+                } else {
+                  setUser({
+                    id: firebaseUser.uid,
+                    name: firebaseUser.displayName || 'User',
+                    email: firebaseUser.email,
+                    avatarUrl: `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
+                    hasChangedUsername: false,
+                    bio: '',
+                  });
+                }
               });
-            } else {
-              // This case might happen if the user was created in Auth but not in Firestore
-              setUser({
-                id: firebaseUser.uid,
-                name: firebaseUser.displayName || 'User',
-                email: firebaseUser.email,
-                avatarUrl: `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
-                hasChangedUsername: false,
-                bio: '',
-              });
-            }
           } else {
-            // User is signed out.
             setUser(null);
           }
           setLoading(false);
@@ -49,7 +46,6 @@ export function useAuth() {
         return () => unsubscribe();
       })
       .catch((error) => {
-        // Handle errors if needed
         setLoading(false);
       });
   }, []);

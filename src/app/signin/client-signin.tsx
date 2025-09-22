@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import {
   Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
 } from '@/components/ui/card';
@@ -42,18 +41,16 @@ export default function SigninPage() {
     }
 
     try {
-      // If username, resolve to email
+      // If username, resolve to email using API route
       if (!emailOrUsername.includes('@')) {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('name', '==', emailOrUsername.toLowerCase()));
-        const querySnapshot = await getDocs(q);
-        if (querySnapshot.empty) {
+        const res = await fetch(`/api/user?username=${encodeURIComponent(emailOrUsername.toLowerCase())}`);
+        const { user } = await res.json();
+        if (!user) {
           setState({ message: 'ایمیل یا رمز عبور نامعتبر است.', errors: {}, success: false });
           setLoading(false);
           return;
         }
-        const userData = querySnapshot.docs[0].data();
-        emailOrUsername = userData.email;
+        emailOrUsername = user.email;
       }
       const userCredential = await signInWithEmailAndPassword(auth, emailOrUsername, password);
       if (!userCredential.user.emailVerified) {

@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { signup } from '@/lib/actions';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import {
   Card,
   CardContent,
@@ -17,19 +18,66 @@ import { SubmitButton } from '@/components/submit-button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Terminal, CheckCircle } from 'lucide-react';
 
+
 const initialState = {
   message: '',
   errors: {},
   success: false,
+  loading: false,
 };
 
 export default function SignupPage() {
-  const [state, formAction] = useActionState(signup, initialState);
+  const [state, setState] = useState(initialState);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setState({ ...initialState, loading: true });
+    const formData = new FormData(e.currentTarget);
+    const username = formData.get('username') as string;
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+
+    // Basic validation
+    if (!username || !email || !password || !confirmPassword) {
+      setState({ ...initialState, message: 'لطفاً همه فیلدها را پر کنید.' });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setState({ ...initialState, message: 'رمزهای عبور یکسان نیستند.' });
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(userCredential.user, { displayName: username });
+      await sendEmailVerification(userCredential.user);
+      // Call API to create user in PostgreSQL
+      await fetch('/api/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: userCredential.user.uid,
+          username,
+          email
+        })
+      });
+      setState({ ...initialState, success: true, message: 'ثبت نام موفقیت آمیز بود. لطفا ایمیل خود را برای تایید چک کنید.' });
+    } catch (e: any) {
+      let message = 'خطایی در هنگام ثبت نام رخ داد.';
+      if (e.code === 'auth/email-already-in-use') {
+        message = 'این ایمیل قبلا استفاده شده است.';
+      } else if (e.message) {
+        message += `\n${e.message}`;
+      }
+      setState({ ...initialState, message });
+    }
+  }
 
   return (
     <div className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
       <Card className="w-full max-w-md">
-        <form action={formAction}>
+        <form onSubmit={handleSubmit}>
           <CardHeader>
             <CardTitle className="font-headline text-3xl">ایجاد حساب جدید</CardTitle>
             <CardDescription>

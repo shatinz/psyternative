@@ -1,7 +1,10 @@
-import { posts, mockUser } from '@/lib/data';
+import React from 'react';
+import { mockUser } from '@/lib/data';
+import { getPostById } from '../../../db/posts';
 import { notFound } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns-jalali';
+import { faIR } from 'date-fns-jalali/locale';
 import Image from 'next/image';
 import ReplyCard from '@/components/reply-card';
 import { Separator } from '@/components/ui/separator';
@@ -9,8 +12,12 @@ import { MessageCircle } from 'lucide-react';
 import ReplyForm from '@/components/reply-form';
 import Link from 'next/link';
 
-export default function PostPage({ params }: { params: { id: string } }) {
-  const post = posts.find(p => p.id === params.id);
+export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
+  const unwrappedParams = React.use(params);
+  const [post, setPost] = React.useState(null);
+  React.useEffect(() => {
+    getPostById(unwrappedParams.id).then(setPost);
+  }, [unwrappedParams.id]);
 
   if (!post) {
     notFound();
@@ -35,9 +42,9 @@ export default function PostPage({ params }: { params: { id: string } }) {
               <span>{post.author.name}</span>
             </Link>
             <span>•</span>
-            <time dateTime={post.createdAt.toISOString()}>
-              {format(post.createdAt, 'd MMMM yyyy')}
-            </time>
+<time dateTime={post.createdAt.toISOString()}>
+  {format(post.createdAt, 'd MMMM yyyy', { locale: faIR })}
+</time>
           </div>
         </header>
 

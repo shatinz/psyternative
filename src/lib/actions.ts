@@ -4,11 +4,13 @@ import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
 import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
-import { posts, mockUser, arts, anotherUser } from './data';
+import { mockUser, arts, anotherUser } from './data';
+import { createPost as dbCreatePost } from '../../db/posts';
 import type { Reply, User } from './types';
-import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword, updateProfile as updateFirebaseProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword, updateProfile as updateFirebaseProfile, signOut } from 'firebase/auth';
 import { auth, db } from './firebase';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { createUser as dbCreateUser } from '../../db/users';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 
 
 // Mock DB interactions
@@ -61,19 +63,15 @@ export async function createPost(
       };
     }
 
-    // Add post to our mock DB
-    const newPost = {
-      id: `post-${Date.now()}`,
+    // Add post to PostgreSQL
+    const postId = `post-${Date.now()}`;
+    await dbCreatePost({
+      postId,
       title,
       content,
-      author: mockUser,
-      createdAt: new Date(),
+      authorUid: mockUser.id, // Replace with real user UID in production
       sectionSlug,
-      replies: [],
-    };
-    posts.unshift(newPost);
-    await mockDBSuccess();
-
+    });
     revalidatePath(`/sections/${sectionSlug}`);
     return {message: 'پست شما با موفقیت ایجاد شد.', success: true};
   } catch (e) {
@@ -291,35 +289,15 @@ export async function signup(
   const { email, password, username } = validatedFields.data;
 
   try {
-    // Check if username is already taken in Firestore
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('name', '==', username.toLowerCase()));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        return {
-            message: 'این نام کاربری قبلا گرفته شده است.',
-            errors: {
-                username: ['این نام کاربری در دسترس نیست. لطفا نام دیگری را امتحان کنید.'],
-            },
-            success: false,
-        };
-    }
-
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     await updateFirebaseProfile(userCredential.user, { displayName: username });
-    
-    // Store user info in Firestore
-    await setDoc(doc(db, 'users', userCredential.user.uid), {
-        id: userCredential.user.uid,
-        name: username,
-        email: email,
-        avatarUrl: `https://picsum.photos/seed/${userCredential.user.uid}/100/100`,
-        hasChangedUsername: false,
-        bio: '',
-    });
-
     await sendEmailVerification(userCredential.user);
-    
+    // Create user in PostgreSQL
+    await dbCreateUser({
+      uid: userCredential.user.uid,
+      username,
+      email
+    });
     return {
       message: 'ثبت نام موفقیت آمیز بود. لطفا ایمیل خود را برای تایید چک کنید. اگر ایمیل در صندوق ورودی شما نبود، پوشه اسپم را نیز بررسی کنید.',
       success: true,
@@ -328,6 +306,8 @@ export async function signup(
     let message = 'خطایی در هنگام ثبت نام رخ داد.';
     if (e.code === 'auth/email-already-in-use') {
       message = 'این ایمیل قبلا استفاده شده است.';
+    } else if (e.message) {
+      message += `\n${e.message}`;
     }
     return {
       message,
@@ -397,7 +377,7 @@ export async function signin(
 }
 
 export async function signout() {
-  await auth.signOut();
+  // Note: signOut is client-side only, handle in client component
   redirect('/signin');
 }
 

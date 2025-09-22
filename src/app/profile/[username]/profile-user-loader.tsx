@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+//
 import ProfileClientPage from '@/components/profile-client-page';
 
 export default function ProfileUserLoader({ username }: { username: string }) {
@@ -9,20 +8,14 @@ export default function ProfileUserLoader({ username }: { username: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchUser() {
-      setLoading(true);
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('name', '==', username));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        setProfileUser({ id: userDoc.id, ...userDoc.data() });
-      } else {
-        setProfileUser(null);
-      }
-      setLoading(false);
-    }
-    fetchUser();
+    setLoading(true);
+    // Lookup user by username via API route
+    fetch(`/api/user?username=${encodeURIComponent(username)}`)
+      .then(res => res.json())
+      .then(({ user }) => {
+        setProfileUser(user || null);
+        setLoading(false);
+      });
   }, [username]);
 
   if (loading) return <div>در حال بارگذاری...</div>;
