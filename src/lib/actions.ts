@@ -357,19 +357,20 @@ export async function signin(
 
   let { emailOrUsername, password } = validatedFields.data;
 
+
   try {
     // Check if input is a username or email
     if (!emailOrUsername.includes('@')) {
-        const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('name', '==', emailOrUsername.toLowerCase()));
-        const querySnapshot = await getDocs(q);
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('name', '==', emailOrUsername.toLowerCase()));
+      const querySnapshot = await getDocs(q);
 
-        if (querySnapshot.empty) {
-            return { message: 'ایمیل یا رمز عبور نامعتبر است.', success: false };
-        }
-        
-        const userData = querySnapshot.docs[0].data();
-        emailOrUsername = userData.email;
+      if (querySnapshot.empty) {
+        return { message: 'ایمیل یا رمز عبور نامعتبر است.', success: false };
+      }
+
+      const userData = querySnapshot.docs[0].data();
+      emailOrUsername = userData.email;
     }
 
     const userCredential = await signInWithEmailAndPassword(auth, emailOrUsername, password);
@@ -381,9 +382,13 @@ export async function signin(
       };
     }
   } catch (e: any) {
+    // Log the error for debugging
+    console.error('Sign-in error:', e, { emailOrUsername });
     let message = 'خطایی در هنگام ورود رخ داد. لطفاً دوباره امتحان کنید.';
     if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
       message = 'ایمیل یا رمز عبور نامعتبر است.';
+    } else if (e.code) {
+      message += `\n[${e.code}]`;
     }
     return { message, success: false };
   }
