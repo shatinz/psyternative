@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { SubmitButton } from './submit-button';
+import { useAuth } from '@/hooks/use-auth';
 
 interface PostFormProps {
   sectionSlug: string;
@@ -30,6 +31,7 @@ export default function PostForm({ sectionSlug }: PostFormProps) {
   const [state, formAction] = useActionState(createPost, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     if (state.success) {
@@ -48,6 +50,33 @@ export default function PostForm({ sectionSlug }: PostFormProps) {
     }
   }, [state, toast]);
 
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-muted rounded w-1/3"></div>
+            <div className="h-10 bg-muted rounded"></div>
+            <div className="h-24 bg-muted rounded"></div>
+            <div className="h-10 bg-muted rounded w-1/4"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-center">
+          <p className="text-muted-foreground">
+            برای ایجاد پست جدید، لطفا وارد حساب کاربری خود شوید.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <form ref={formRef} action={formAction}>
@@ -61,6 +90,7 @@ export default function PostForm({ sectionSlug }: PostFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <input type="hidden" name="sectionSlug" value={sectionSlug} />
+          <input type="hidden" name="userId" value={user.id} />
           <div className="space-y-2">
             <Label htmlFor="title">عنوان پست</Label>
             <Input

@@ -25,5 +25,16 @@ export async function GET(req: NextRequest) {
   } else if (username) {
     user = await getUserByUsername(username);
   }
+  if (user) {
+    // Transform DB row to match User type
+    user = {
+      id: user.uid,
+      name: user.username,
+      avatarUrl: user.avatar_url || '',
+      hasChangedUsername: user.has_changed_username || false,
+      email: user.email,
+      bio: user.bio,
+    };
+  }
   return NextResponse.json({ user });
 }

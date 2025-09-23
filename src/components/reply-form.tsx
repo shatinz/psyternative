@@ -81,8 +81,9 @@ export default function ReplyForm({ postId }: ReplyFormProps) {
           <CardTitle className="font-headline text-xl">پاسخ خود را ثبت کنید</CardTitle>
         </CardHeader>
         <CardContent>
-          <input type="hidden" name="postId" value={postId} />
-          <div className="flex gap-4">
+           <input type="hidden" name="postId" value={postId} />
+           <input type="hidden" name="userId" value={user.id} />
+           <div className="flex gap-4">
             <Avatar className="h-10 w-10">
               <AvatarImage src={user.avatarUrl} alt={user.name} />
               <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
@@ -96,6 +97,7 @@ export default function ReplyForm({ postId }: ReplyFormProps) {
                 name="content"
                 placeholder={`در پاسخ به ${user.name} بنویسید...`}
                 rows={4}
+                required
               />
               {state.errors?.content && (
                 <p className="text-sm text-destructive">

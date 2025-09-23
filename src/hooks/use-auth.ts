@@ -21,10 +21,10 @@ export function useAuth() {
                 if (userData) {
                   setUser({
                     id: firebaseUser.uid,
-                    name: userData.username || firebaseUser.displayName || 'User',
+                    name: userData.name || firebaseUser.displayName || 'User',
                     email: userData.email || firebaseUser.email,
-                    avatarUrl: userData.avatar_url || `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
-                    hasChangedUsername: userData.has_changed_username || false,
+                    avatarUrl: userData.avatarUrl || `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
+                    hasChangedUsername: userData.hasChangedUsername || false,
                     bio: userData.bio || '',
                   });
                 } else {

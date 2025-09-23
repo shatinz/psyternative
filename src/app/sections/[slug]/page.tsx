@@ -1,10 +1,12 @@
+'use client';
+
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { sections } from '@/lib/data';
-import { getPostsBySection } from '../../../db/posts';
 import PostCard from '@/components/post-card';
 import PostForm from '@/components/post-form';
 import { Separator } from '@/components/ui/separator';
+import type { Post } from '@/lib/types';
 
 export default function SectionPage({ params }: { params: Promise<{ slug: string }> }) {
   const unwrappedParams = React.use(params);
@@ -13,9 +15,11 @@ export default function SectionPage({ params }: { params: Promise<{ slug: string
     notFound();
   }
 
-  const [sectionPosts, setSectionPosts] = React.useState([]);
+  const [sectionPosts, setSectionPosts] = React.useState<Post[]>([]);
   React.useEffect(() => {
-    getPostsBySection(unwrappedParams.slug).then(setSectionPosts);
+    fetch(`/api/posts?section=${unwrappedParams.slug}`)
+      .then(res => res.json())
+      .then(data => setSectionPosts(data.map((post: any) => ({ ...post, createdAt: new Date(post.createdAt) }))));
   }, [unwrappedParams.slug]);
 
   return (

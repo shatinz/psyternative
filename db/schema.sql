@@ -19,3 +19,14 @@ CREATE TABLE IF NOT EXISTS posts (
     created_at TIMESTAMP DEFAULT NOW(),
     section_slug VARCHAR(64) NOT NULL
 );
+
+-- Replies table
+CREATE TABLE IF NOT EXISTS replies (
+    id SERIAL PRIMARY KEY,
+    reply_id VARCHAR(64) UNIQUE NOT NULL,
+    post_id VARCHAR(64) NOT NULL REFERENCES posts(post_id),
+    parent_reply_id VARCHAR(64) REFERENCES replies(reply_id),
+    content TEXT NOT NULL,
+    author_uid VARCHAR(64) NOT NULL REFERENCES users(uid),
+    created_at TIMESTAMP DEFAULT NOW()
+);

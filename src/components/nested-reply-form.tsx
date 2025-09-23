@@ -47,6 +47,7 @@ export default function NestedReplyForm({ postId, parentId, onSuccess, user }: N
     <form ref={formRef} action={formAction} className="mt-4">
       <input type="hidden" name="postId" value={postId} />
       <input type="hidden" name="parentId" value={parentId} />
+      <input type="hidden" name="userId" value={user.id} />
       <div className="flex gap-4">
         <Avatar className="h-10 w-10">
           <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -59,6 +60,7 @@ export default function NestedReplyForm({ postId, parentId, onSuccess, user }: N
             placeholder={`پاسخ خود را بنویسید...`}
             rows={3}
             className="w-full"
+            required
           />
           {state.errors?.content && (
             <p className="text-sm text-destructive">

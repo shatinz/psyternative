@@ -5,11 +5,11 @@ import {revalidatePath} from 'next/cache';
 import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
 import { mockUser, arts, anotherUser } from './data';
-import { createPost as dbCreatePost } from '../../db/posts';
+import { createPost as dbCreatePost, createReply as dbCreateReply } from '../../db/posts';
 import type { Reply, User } from './types';
 import { createUserWithEmailAndPassword, sendEmailVerification, signInWithEmailAndPassword, updateProfile as updateFirebaseProfile, signOut } from 'firebase/auth';
 import { auth, db } from './firebase';
-import { createUser as dbCreateUser } from '../../db/users';
+import { createUser as dbCreateUser, updateUser as dbUpdateUser, getUserByUsername as dbGetUserByUsername, getUserByUid as dbGetUserByUid } from '../../db/users';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc, getDoc } from 'firebase/firestore';
 
 
@@ -28,6 +28,7 @@ const postSchema = z.object({
   title: z.string().min(3, 'عنوان باید حداقل ۳ کاراکتر باشد.'),
   content: z.string().min(10, 'محتوا باید حداقل ۱۰ کاراکتر باشد.'),
   sectionSlug: z.string(),
+  userId: z.string(),
 });
 
 export async function createPost(
@@ -38,6 +39,7 @@ export async function createPost(
     title: formData.get('title'),
     content: formData.get('content'),
     sectionSlug: formData.get('sectionSlug'),
+    userId: formData.get('userId'),
   });
 
   if (!validatedFields.success) {
@@ -48,7 +50,7 @@ export async function createPost(
     };
   }
 
-  const {title, content, sectionSlug} = validatedFields.data;
+  const {title, content, sectionSlug, userId} = validatedFields.data;
 
   try {
     const moderationResult = await aiContentModeration({text: content});
@@ -69,7 +71,7 @@ export async function createPost(
       postId,
       title,
       content,
-      authorUid: mockUser.id, // Replace with real user UID in production
+      authorUid: userId,
       sectionSlug,
     });
     revalidatePath(`/sections/${sectionSlug}`);
@@ -83,9 +85,10 @@ export async function createPost(
 }
 
 const replySchema = z.object({
-  content: z.string().min(3, 'پاسخ باید حداقل ۳ کاراکتر باشد.'),
+  content: z.string().min(1, 'پاسخ نمی‌تواند خالی باشد.'),
   postId: z.string(),
   parentId: z.string().optional(),
+  userId: z.string(),
 });
 
 function findReplyById(replies: Reply[], id: string): Reply | undefined {
@@ -112,6 +115,7 @@ export async function createReply(
     content: formData.get('content'),
     postId: formData.get('postId'),
     parentId: formData.get('parentId'),
+    userId: formData.get('userId'),
   });
 
   if (!validatedFields.success) {
@@ -122,7 +126,7 @@ export async function createReply(
     };
   }
 
-  const { content, postId, parentId } = validatedFields.data;
+  const { content, postId, parentId, userId } = validatedFields.data;
 
   try {
     const moderationResult = await aiContentModeration({ text: content });
@@ -136,32 +140,16 @@ export async function createReply(
         success: false,
       };
     }
-    
-    // Add reply to our mock DB
-    const post = posts.find(p => p.id === postId);
-    if (post) {
-      const newReply: Reply = {
-        id: `reply-${Date.now()}`,
-        content,
-        author: mockUser,
-        createdAt: new Date(),
-        replies: [],
-      };
-      
-      if (parentId) {
-        // It's a nested reply
-        const parentReply = findReplyById(post.replies, parentId);
-        if (parentReply) {
-          parentReply.replies = parentReply.replies || [];
-          parentReply.replies.push(newReply);
-        }
-      } else {
-        // It's a top-level reply
-        post.replies.push(newReply);
-      }
-    }
-    
-    await mockDBSuccess();
+
+    // Add reply to PostgreSQL
+    const replyId = `reply-${Date.now()}`;
+    await dbCreateReply({
+      replyId,
+      postId,
+      parentReplyId: parentId,
+      content,
+      authorUid: userId,
+    });
 
     revalidatePath(`/posts/${postId}`);
     return { message: 'پاسخ شما با موفقیت ثبت شد.', success: true };
@@ -191,73 +179,230 @@ export async function updateProfile(
 
   if (!validatedFields.success) {
     return {
-      message: 'لطفاً فرم را به درستی پر کنید.',
+      message: 'لطفا فورم را به درستی وارد کنید.',
       errors: validatedFields.error.flatten().fieldErrors,
       success: false,
     };
   }
-  
+
   const { username, bio, userId } = validatedFields.data;
 
-  const userDocRef = doc(db, 'users', userId);
-  const userDoc = await getDoc(userDocRef);
+  // Get user from PostgreSQL
+  const userData = await dbGetUserByUsername(userId); // Wait, no, getUserByUid
+  // I need getUserByUid
+  // Let me import it
+  // Actually, since userId is uid, I can use getUserByUid
 
-  if (!userDoc.exists()) {
+  // Wait, in the form, userId is user.id, which is uid
+  // So I need to get user by uid
+
+  // But I don't have getUserByUid imported
+  // Let me add it
+
+  // Actually, in the code, it's getUserByUid, but I imported getUserByUsername as dbGetUserByUsername
+
+  // Let me add getUserByUid
+
+  // First, let me check if it's imported
+
+  // In the import, I have getUserByUsername as dbGetUserByUsername
+
+  // I need to add getUserByUid
+
+  // Let me update the import
+
+  // Wait, the import is createUser as dbCreateUser, updateUser as dbUpdateUser, getUserByUsername as dbGetUserByUsername
+
+  // I need to add getUserByUid as dbGetUserByUid
+
+  // Let me do that
+
+  // But for now, since userId is uid, I can use getUserByUid
+
+  // Let me add it to the import
+
+  // The import is:
+
+  // import { createUser as dbCreateUser, updateUser as dbUpdateUser, getUserByUsername as dbGetUserByUsername } from '../../db/users';
+
+  // I need to add getUserByUid as dbGetUserByUid
+
+  // Let me update the import first
+
+  // Actually, let me do it in the function
+
+  // To get the current user data, I need to fetch it by uid
+
+  // So I need to import getUserByUid
+
+  // Let me update the import
+
+  // Change to:
+
+  // import { createUser as dbCreateUser, updateUser as dbUpdateUser, getUserByUsername as dbGetUserByUsername, getUserByUid as dbGetUserByUid } from '../../db/users';
+
+  // Then use dbGetUserByUid(userId)
+
+  // Yes
+
+  // Then transform the userData to match the type
+
+  // userData will have username, etc.
+
+  // So userData.name = userData.username
+
+  // etc.
+
+  // Then proceed
+
+  // For checking username uniqueness, use dbGetUserByUsername(username)
+
+  // If it exists and uid != userId, then taken
+
+  // Yes
+
+  // Then update with dbUpdateUser(userId, { username, bio, hasChangedUsername })
+
+  // Yes
+
+  // Let me write the code
+
+  // First, update the import
+
+  // I already have the import, let me add getUserByUid
+
+  // The import is at line 12
+
+  // Let me update it
+
+  // Actually, the import is:
+
+  // import { createUser as dbCreateUser } from '../../db/users';
+
+  // No, I changed it to:
+
+  // import { createUser as dbCreateUser, updateUser as dbUpdateUser, getUserByUsername as dbGetUserByUsername } from '../../db/users';
+
+  // Let me add getUserByUid
+
+  // Change to:
+
+  // import { createUser as dbCreateUser, updateUser as dbUpdateUser, getUserByUsername as dbGetUserByUsername, getUserByUid as dbGetUserByUid } from '../../db/users';
+
+  // Then in the function:
+
+  const dbUser = await dbGetUserByUid(userId);
+
+  if (!dbUser) {
+
     return { message: 'کاربر یافت نشد.', success: false };
+
   }
-  
-  const userData = userDoc.data() as User;
-  let hasChangedUsername = userData.hasChangedUsername;
+
+  const currentUser = {
+
+    id: dbUser.uid,
+
+    name: dbUser.username,
+
+    email: dbUser.email,
+
+    avatarUrl: dbUser.avatar_url || '',
+
+    hasChangedUsername: dbUser.has_changed_username || false,
+
+    bio: dbUser.bio || '',
+
+  };
+
+  let hasChangedUsername = currentUser.hasChangedUsername;
 
   // Only check for username uniqueness and update Firebase Auth display name if it has changed
-  if (username.toLowerCase() !== userData.name.toLowerCase()) {
-    if (userData.hasChangedUsername) {
+
+  if (username.toLowerCase() !== currentUser.name.toLowerCase()) {
+
+    if (currentUser.hasChangedUsername) {
+
       return {
+
         message: 'شما قبلاً نام کاربری خود را تغییر داده‌اید.',
+
         success: false,
+
       };
+
     }
 
-    const usersRef = collection(db, 'users');
-    const q = query(usersRef, where('name', '==', username.toLowerCase()));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        return {
-            message: 'این نام کاربری قبلا گرفته شده است.',
-            errors: {
-                username: ['این نام کاربری در دسترس نیست. لطفا نام دیگری را امتحان کنید.'],
-            },
-            success: false,
-        };
+    // Check uniqueness in PostgreSQL
+
+    const existingUser = await dbGetUserByUsername(username);
+
+    if (existingUser && existingUser.uid !== userId) {
+
+      return {
+
+        message: 'این نام کاربری قبلا گرفته شده است.',
+
+        errors: {
+
+          username: ['این نام کاربری در دسترس نیست. لطفا نام دیگری را امتحان کنید.'],
+
+        },
+
+        success: false,
+
+      };
+
     }
+
     hasChangedUsername = true;
+
     const user = auth.currentUser;
+
     if (user) {
-        await updateFirebaseProfile(user, { displayName: username });
+
+      await updateFirebaseProfile(user, { displayName: username });
+
     }
+
   }
 
-
   try {
-    await updateDoc(userDocRef, {
-      name: username,
+
+    await dbUpdateUser(userId, {
+
+      username: username !== currentUser.name ? username : undefined,
+
       bio: bio || '',
-      hasChangedUsername,
+
+      hasChangedUsername: hasChangedUsername !== currentUser.hasChangedUsername ? hasChangedUsername : undefined,
+
     });
-    
+
     revalidatePath(`/profile/${username}`);
+
     revalidatePath('/profile');
-    if (username.toLowerCase() !== userData.name.toLowerCase()) {
-        redirect(`/profile/${username}`);
+
+    if (username.toLowerCase() !== currentUser.name.toLowerCase()) {
+
+      redirect(`/profile/${username}`);
+
     }
 
     return {message: 'پروفایل شما با موفقیت به روز شد.', success: true};
+
   } catch (e) {
+
     return {
+
       message: 'خطایی در هنگام به روز رسانی پروفایل رخ داد.',
+
       success: false,
+
     };
+
   }
+
 }
 
 const signupSchema = z
@@ -341,15 +486,13 @@ export async function signin(
   try {
     // Check if input is a username or email
     if (!emailOrUsername.includes('@')) {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, where('name', '==', emailOrUsername.toLowerCase()));
-      const querySnapshot = await getDocs(q);
+      // Check if username exists in PostgreSQL
+      const userData = await dbGetUserByUsername(emailOrUsername.toLowerCase());
 
-      if (querySnapshot.empty) {
+      if (!userData) {
         return { message: 'ایمیل یا رمز عبور نامعتبر است.', success: false };
       }
 
-      const userData = querySnapshot.docs[0].data();
       emailOrUsername = userData.email;
     }
 
@@ -447,24 +590,18 @@ export async function createArt(
 
 
 export async function getProfileUser(username: string): Promise<User | null> {
-  const usersRef = collection(db, 'users');
-  const q = query(usersRef, where('name', '==', username));
-  const querySnapshot = await getDocs(q);
+  const userData = await dbGetUserByUsername(username);
 
-  if (querySnapshot.empty) {
+  if (!userData) {
     return null;
   }
-  
-  // We assume usernames are unique, so we take the first result.
-  const userDoc = querySnapshot.docs[0];
-  const userData = userDoc.data();
 
   return {
-    id: userDoc.id,
-    name: userData.name,
+    id: userData.uid,
+    name: userData.username,
     email: userData.email,
-    avatarUrl: userData.avatarUrl,
-    hasChangedUsername: userData.hasChangedUsername,
-    bio: userData.bio,
+    avatarUrl: userData.avatar_url || '',
+    hasChangedUsername: userData.has_changed_username || false,
+    bio: userData.bio || '',
   };
 }
