@@ -2,7 +2,6 @@
 
 import {z} from 'zod';
 import {revalidatePath} from 'next/cache';
-import {aiContentModeration} from '@/ai/flows/ai-content-moderation';
 import {redirect} from 'next/navigation';
 import { mockUser, arts, anotherUser } from './data';
 import { createPost as dbCreatePost, createReply as dbCreateReply } from '../../db/posts';
@@ -53,17 +52,27 @@ export async function createPost(
   const {title, content, sectionSlug, userId} = validatedFields.data;
 
   try {
-    const moderationResult = await aiContentModeration({text: content});
-
-    if (moderationResult.flagForReview) {
+    // Check if user exists in database
+    const userExists = await dbGetUserByUid(userId);
+    if (!userExists) {
       return {
-        message: 'محتوای شما با قوانین مغایرت دارد.',
-        errors: {
-          content: [`دلیل: ${moderationResult.reason || 'محتوای نامناسب'}`],
-        },
+        message: 'کاربر یافت نشد. لطفا دوباره وارد شوید.',
         success: false,
       };
     }
+
+    // Temporarily disable moderation for debugging
+    // const moderationResult = await aiContentModeration({text: content});
+
+    // if (moderationResult.flagForReview) {
+    //   return {
+    //     message: 'محتوای شما با قوانین مغایرت دارد.',
+    //     errors: {
+    //       content: [`دلیل: ${moderationResult.reason || 'محتوای نامناسب'}`],
+    //     },
+    //     success: false,
+    //   };
+    // }
 
     // Add post to PostgreSQL
     const postId = `post-${Date.now()}`;

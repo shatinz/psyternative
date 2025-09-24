@@ -22,6 +22,29 @@ export default function SectionPage({ params }: { params: Promise<{ slug: string
       .then(data => setSectionPosts(data.map((post: any) => ({ ...post, createdAt: new Date(post.createdAt) }))));
   }, [unwrappedParams.slug]);
 
+  if (section.slug === 'gallery') {
+    return (
+      <div className="container mx-auto max-w-7xl px-4 py-8">
+        <header className="mb-8 text-center">
+          <div className="inline-block rounded-lg bg-primary/10 p-4 text-primary">
+            <section.icon className="h-12 w-12" />
+          </div>
+          <h1 className="mt-4 font-headline text-4xl font-bold">
+            {section.name}
+          </h1>
+          <p className="mt-2 text-lg text-muted-foreground">
+            {section.description}
+          </p>
+        </header>
+
+        <div className="text-center py-16">
+          <h2 className="text-2xl font-semibold">Gallery is not available</h2>
+          <p className="mt-4 text-muted-foreground">Will open soon</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto max-w-5xl px-4 py-8">
       <header className="mb-8 text-center">
