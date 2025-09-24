@@ -58,6 +58,20 @@ export default function SigninPage() {
         setLoading(false);
         return;
       }
+      // Check if user exists in DB, if not, create
+      const res = await fetch(`/api/user?uid=${userCredential.user.uid}`);
+      const { user } = await res.json();
+      if (!user) {
+        await fetch('/api/user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: userCredential.user.uid,
+            username: userCredential.user.displayName || '',
+            email: userCredential.user.email || ''
+          })
+        });
+      }
       setState({ message: '', errors: {}, success: true });
       window.location.href = '/';
     } catch (e: any) {

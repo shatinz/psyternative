@@ -12,12 +12,24 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { signout } from '@/lib/actions';
+import { signOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
 import { Skeleton } from './ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const handleSignout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/signin');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -63,13 +75,11 @@ export default function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled>تنظیمات</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <form action={signout}>
-                  <DropdownMenuItem asChild>
-                    <button type="submit" className="w-full text-right">
-                      خروج
-                    </button>
-                  </DropdownMenuItem>
-                </form>
+                <DropdownMenuItem asChild>
+                  <button onClick={handleSignout} className="w-full text-right">
+                    خروج
+                  </button>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (

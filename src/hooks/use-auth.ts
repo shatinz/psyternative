@@ -26,6 +26,7 @@ export function useAuth() {
                     avatarUrl: userData.avatarUrl || `https://picsum.photos/seed/${firebaseUser.uid}/100/100`,
                     hasChangedUsername: userData.hasChangedUsername || false,
                     bio: userData.bio || '',
+                    isAdmin: userData.isAdmin || false,
                   });
                 } else {
                   setUser({

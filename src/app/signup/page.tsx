@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import {
   Card,
@@ -52,17 +52,8 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName: username });
       await sendEmailVerification(userCredential.user);
-      // Call API to create user in PostgreSQL
-      await fetch('/api/user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          uid: userCredential.user.uid,
-          username,
-          email
-        })
-      });
-      setState({ ...initialState, success: true, message: 'ثبت نام موفقیت آمیز بود. لطفا ایمیل خود را برای تایید چک کنید.' });
+      await signOut(auth);
+      setState({ ...initialState, success: true, message: 'ثبت نام موفقیت آمیز بود. لطفا ایمیل خود را برای تایید چک کنید. اگر ایمیل را پیدا نکردید، پوشه اسپم را بررسی کنید.' });
     } catch (e: any) {
       let message = 'خطایی در هنگام ثبت نام رخ داد.';
       if (e.code === 'auth/email-already-in-use') {

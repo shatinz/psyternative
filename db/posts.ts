@@ -77,7 +77,7 @@ async function buildReplyTree(replyRows: any[]): Promise<any[]> {
       id: row.reply_id,
       content: row.content,
       author,
-      createdAt: new Date(row.created_at).toISOString(),
+      createdAt: new Date(row.created_at),
       replies: [],
     };
     replyMap.set(row.reply_id, reply);
@@ -102,4 +102,14 @@ async function buildReplyTree(replyRows: any[]): Promise<any[]> {
 export async function getRepliesForPost(postId: string) {
   const res = await query('SELECT * FROM replies WHERE post_id = $1 ORDER BY created_at ASC', [postId]);
   return buildReplyTree(res.rows);
+}
+
+export async function deletePost(postId: string) {
+  // Delete replies first due to foreign key
+  await query('DELETE FROM replies WHERE post_id = $1', [postId]);
+  return query('DELETE FROM posts WHERE post_id = $1', [postId]);
+}
+
+export async function deleteReply(replyId: string) {
+  return query('DELETE FROM replies WHERE reply_id = $1', [replyId]);
 }

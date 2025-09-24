@@ -9,6 +9,7 @@ async function seed() {
     email: 'sample@example.com',
     avatarUrl: 'https://picsum.photos/seed/user1/100/100',
     hasChangedUsername: false,
+    isAdmin: true,
   });
 
   await createUser({

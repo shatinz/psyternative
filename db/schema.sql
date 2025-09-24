@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(128) UNIQUE NOT NULL,
     avatar_url TEXT,
     has_changed_username BOOLEAN DEFAULT FALSE,
-    bio TEXT
+    bio TEXT,
+    is_admin BOOLEAN DEFAULT FALSE
 );
 
 -- Posts table

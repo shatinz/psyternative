@@ -7,6 +7,7 @@ export type User = {
   hasChangedUsername: boolean;
   email: string | null;
   bio?: string;
+  isAdmin?: boolean;
 };
 
 export type Reply = {

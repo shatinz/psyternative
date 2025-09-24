@@ -1,18 +1,19 @@
 import { query } from './index';
 
-export async function createUser({ uid, username, email, avatarUrl, hasChangedUsername, bio }: {
+export async function createUser({ uid, username, email, avatarUrl, hasChangedUsername, bio, isAdmin }: {
   uid: string;
   username: string;
   email: string;
   avatarUrl?: string;
   hasChangedUsername?: boolean;
   bio?: string;
+  isAdmin?: boolean;
 }) {
   return query(
-    `INSERT INTO users (uid, username, email, avatar_url, has_changed_username, bio)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO users (uid, username, email, avatar_url, has_changed_username, bio, is_admin)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (uid) DO NOTHING`,
-    [uid, username, email, avatarUrl || null, hasChangedUsername || false, bio || null]
+    [uid, username, email, avatarUrl || null, hasChangedUsername || false, bio || null, isAdmin || false]
   );
 }
 
@@ -65,5 +66,10 @@ export async function getUserForDisplay(uid: string) {
     avatarUrl: user.avatar_url || '',
     hasChangedUsername: user.has_changed_username || false,
     bio: user.bio || '',
+    isAdmin: user.is_admin || false,
   };
+}
+
+export async function deleteUser(uid: string) {
+  return query('DELETE FROM users WHERE uid = $1', [uid]);
 }

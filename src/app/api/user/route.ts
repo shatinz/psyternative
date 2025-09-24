@@ -1,4 +1,7 @@
-import { createUser as dbCreateUser } from '../../../../db/users';
+import { NextRequest, NextResponse } from 'next/server';
+import { createUser as dbCreateUser, getUserByUid, getUserByUsername, deleteUser } from '../../../../db/users';
+import { verifyUserAndCheckAdmin } from '../../../lib/auth-utils';
+
 export async function POST(req: NextRequest) {
   const { uid, username, email } = await req.json();
   if (!uid || !username || !email) {
@@ -12,8 +15,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'DB error', details: e?.message || e }, { status: 500 });
   }
 }
-import { NextRequest, NextResponse } from 'next/server';
-import { getUserByUid, getUserByUsername } from '../../../../db/users';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -34,7 +35,32 @@ export async function GET(req: NextRequest) {
       hasChangedUsername: user.has_changed_username || false,
       email: user.email,
       bio: user.bio,
+      isAdmin: user.is_admin || false,
     };
   }
   return NextResponse.json({ user });
+}
+
+export async function DELETE(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const uid = searchParams.get('uid');
+
+  if (!uid) {
+    return NextResponse.json({ error: 'User ID required' }, { status: 400 });
+  }
+
+  const authHeader = req.headers.get('authorization');
+  const userAuth = await verifyUserAndCheckAdmin(authHeader);
+
+  if (!userAuth || !userAuth.isAdmin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+  }
+
+  try {
+    await deleteUser(uid);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
